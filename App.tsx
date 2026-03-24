@@ -7,6 +7,7 @@ import CompositionPage from './pages/CompositionPage';
 import AxlePage from './pages/AxlePage';
 import EsalsPage from './pages/EsalsPage';
 import EsalCalculationPage from './pages/EsalCalculationPage';
+import UnamPage from './pages/UnamPage';
 
 const App: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ const App: React.FC = () => {
             <Route path="/ejes" element={<AxlePage />} />
             <Route path="/esals" element={<EsalsPage />} />
             <Route path="/calculo-esals" element={<EsalCalculationPage />} />
+            <Route path="/unam" element={<UnamPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

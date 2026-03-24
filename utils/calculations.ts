@@ -111,3 +111,92 @@ export function calculateEsalRows(genData: GeneralData, snSeed: number, ejesResu
         };
     });
 }
+
+// --- Layer Property Calculator Utilities ---
+
+export function getLayerFormulaType(name: string): number {
+    const n = name.toLowerCase();
+    if (n.includes("alto desempeño")) return 1;
+    if (n.includes("carpeta asfáltica normal") || n === "base asfáltica" || n.includes("carpeta asfáltica nueva") || n.includes("base asfáltica nueva")) return 2;
+    if (n.includes("cementada")) return 3;
+    if (n.includes("base hidráulica")) return 4;
+    if (n.includes("sub-base hidráulica")) return 5;
+    return 0;
+}
+
+export function calculateAFromMR(name: string, mr: number): number {
+    const type = getLayerFormulaType(name);
+    if (type === 0 || mr <= 0) return 0;
+    let a = 0;
+    if (type === 1) a = 0.171 * Math.log(mr) - 1.784;
+    if (type === 2) a = 0.184 * Math.log(mr) - 1.9547;
+    if (type === 3) a = 0.0000004 * mr - 0.0702;
+    if (type === 4) a = 0.249 * Math.log10(mr) - 0.977;
+    if (type === 5) a = 0.227 * Math.log10(mr) - 0.839;
+    return Math.max(0, parseFloat(a.toFixed(3)));
+}
+
+export function calculateMRFromA(name: string, a: number): number {
+    const type = getLayerFormulaType(name);
+    if (type === 0 || a <= 0) return 0;
+    let mr = 0;
+    if (type === 1) mr = Math.exp((a + 1.784) / 0.171);
+    if (type === 2) mr = Math.exp((a + 1.9547) / 0.184);
+    if (type === 3) mr = (a + 0.0702) / 0.0000004;
+    if (type === 4) mr = Math.pow(10, (a + 0.977) / 0.249);
+    if (type === 5) mr = Math.pow(10, (a + 0.839) / 0.227);
+    return Math.round(mr);
+}
+
+export function calculateUnamDamage(P: number, type: string, index: number, Z: number) {
+    const q = index === 0 ? 2 : 6;
+    const sigmaZst = 5.8 * (1 - (Math.pow(Z, 3) / Math.pow(225 + Z * Z, 1.5)));
+    let a = 0;
+    const typeLower = type.toLowerCase();
+    if (typeLower.includes('sencillo')) {
+        a = Math.sqrt((1000 * P) / (2 * Math.PI * q));
+    } else if (typeLower.includes('tándem') || typeLower.includes('tandem')) {
+        const factor = Z < 30 ? 1000 : 1111;
+        a = Math.sqrt((factor * P) / (4 * Math.PI * q));
+    } else if (typeLower.includes('trídem') || typeLower.includes('tridem')) {
+        const factor = Z < 30 ? 1000 : 1333;
+        a = Math.sqrt((factor * P) / (6 * Math.PI * q));
+    }
+    const sigmaZi = q * (1 - (Math.pow(Z, 3) / Math.pow(a * a + Z * Z, 1.5)));
+    if (sigmaZi <= 0 || sigmaZst <= 0) return 0;
+    let d = Math.pow(10, (Math.log10(sigmaZi) - Math.log10(sigmaZst)) / Math.log10(1.5));
+    if (Z < 30) {
+        if (typeLower.includes('tándem') || typeLower.includes('tandem')) {
+            d = 2 * d;
+        } else if (typeLower.includes('trídem') || typeLower.includes('tridem')) {
+            d = 3 * d;
+        }
+    }
+    return d;
+}
+
+export function calculateUnamTotalAccumulated(genData: GeneralData, compData: number[], zDepth: number = 0) {
+    const ejesResults = calculateEjesResults(genData, compData);
+    let sum = 0;
+    TABLE_STATIC_ROWS.forEach((staticRow, index) => {
+        const rowTipo = staticRow[1] as string;
+        let wTon = 0;
+        switch (genData.roadType) {
+            case 'ET_A': wTon = staticRow[4] as number; break;
+            case 'B': wTon = staticRow[5] as number; break;
+            case 'C': wTon = staticRow[6] as number; break;
+            case 'D': wTon = staticRow[7] as number; break;
+            default: wTon = staticRow[4] as number;
+        }
+        const damage = calculateUnamDamage(wTon, rowTipo, index, zDepth);
+        sum += (ejesResults[index] || 0) * damage;
+    });
+
+    const r = genData.growthRate / 100;
+    const n = genData.designPeriod;
+    let ct = n;
+    if (r > 0) {
+        ct = (Math.pow(1 + r, n) - 1) / r;
+    }
+    return { totalEquiv1stYear: sum, ct, totalAccumulated: sum * ct };
+}

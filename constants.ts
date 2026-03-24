@@ -21,6 +21,7 @@ export const DEFAULT_GENERAL_DATA: GeneralData = {
     projectName: "Carretera Tuxtla Gutiérrez - Cd. Cuauhtemoc",
     section: "Chiapa de Corzo - San Cristóbal de las Casas",
     roadType: "ET_A",
+    networkType: "Corredor",
     tdpa: 7500,
     pvc: 80,
     lanes: "1",

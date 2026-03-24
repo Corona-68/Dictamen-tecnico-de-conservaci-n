@@ -16,6 +16,7 @@ const CompositionPage: React.FC = () => {
   
   // Data for Method 1 & 2 (Vehicles)
   const [vehicleValues, setVehicleValues] = useState<CompositionData>(DEFAULT_COMPOSITION);
+  const [tabularInput, setTabularInput] = useState('');
   
   // Data for Method 3 (Direct Axles)
   const [directRows, setDirectRows] = useState<AxleInputRow[]>([]);
@@ -64,6 +65,22 @@ const CompositionPage: React.FC = () => {
     const newValues = [...vehicleValues];
     newValues[index] = isNaN(newVal) ? 0 : newVal;
     setVehicleValues(newValues);
+  };
+
+  const handleApplyTabular = () => {
+    const values = tabularInput.trim().split(/[\s\t,]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+    if (values.length === 7) {
+      const newValues = [...vehicleValues];
+      const indices = [0, 1, 5, 7, 14, 15, 24];
+      indices.forEach((idx, i) => {
+        newValues[idx] = values[i];
+      });
+      setVehicleValues(newValues);
+      setTabularInput('');
+      alert("Composición actualizada con éxito (7 vehículos)");
+    } else {
+      alert("Por favor ingrese exactamente 7 valores numéricos (A, B, C2, C3, T3S2, T3S3, T3S2R4) separados por espacios o tabulaciones.");
+    }
   };
 
   // --- Logic for Direct Axle Mode ---
@@ -169,6 +186,31 @@ const CompositionPage: React.FC = () => {
       {/* ---------------- METHOD 1 & 2: VEHICLES ---------------- */}
       {method === 'vehicles' && (
         <>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                    <i className="fas fa-paste mr-2 text-blue-500"></i>
+                    Pegado Rápido (7 Vehículos: A, B, C2, C3, T3S2, T3S3, T3S2R4)
+                </label>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={tabularInput}
+                        onChange={(e) => setTabularInput(e.target.value)}
+                        placeholder="Ej: 85 2 2 2 2 5 2"
+                        className="flex-grow bg-slate-50 border border-slate-300 rounded px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                    <button
+                        onClick={handleApplyTabular}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold transition-colors shadow-sm whitespace-nowrap"
+                    >
+                        Aplicar
+                    </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 italic">
+                    Ingrese los 7 valores separados por espacios o tabulaciones. Se asignarán a los vehículos correspondientes.
+                </p>
+            </div>
+
             <div className="flex justify-between items-center mb-4">
                 <div className="text-sm text-slate-500">
                     {viewMode === 'common' 

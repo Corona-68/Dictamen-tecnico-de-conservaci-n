@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { GeneralData, CompositionData } from '../types';
-import { DEFAULT_COMPOSITION, DEFAULT_GENERAL_DATA } from '../constants';
+import { DEFAULT_COMPOSITION, DEFAULT_GENERAL_DATA, VEHICLE_NAMES } from '../constants';
 import { calculateEjesResults, calculateEsalRows } from '../utils/calculations';
 
 const EsalCalculationPage: React.FC = () => {
@@ -53,74 +53,160 @@ const EsalCalculationPage: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 pb-32">
-            <header className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">Cálculo de ejes equivalentes ESAL's</h1>
-                <div className="flex flex-wrap items-end gap-6 mt-6">
-                    <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl shadow-sm">
-                        <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">TDPA</label>
-                        <div className="text-xl font-mono text-slate-900">{genData.tdpa.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-white border border-slate-200 px-6 py-3 rounded-xl shadow-sm">
-                        <label className="block text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pt (Vida Terminal)</label>
-                        <div className="text-xl font-mono text-slate-900">{genData.finalServiceability}</div>
-                    </div>
-                    <div className="bg-white border border-blue-200 px-6 py-3 rounded-xl shadow-lg shadow-blue-500/5">
-                        <label className="block text-[10px] uppercase tracking-widest text-blue-600 font-bold mb-1">SN (Nº Estructural)</label>
-                        <input
-                            type="number"
-                            value={genData.snSeed}
-                            onChange={handleChangeSN}
-                            step="0.1"
-                            min="0"
-                            className="bg-transparent text-xl font-mono text-slate-900 border-none focus:ring-0 w-24 p-0"
-                        />
-                    </div>
+            <header className="mb-8 text-center border-b-2 border-slate-900 pb-6">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2 uppercase tracking-tight">Dictámenes técnicos de conservación periódica 2026</h1>
+                <p className="text-slate-500 font-medium">Memoria de Cálculo de Pavimentos (AASHTO 93)</p>
+            </header>
 
-                    {/* ESAL Summary Card */}
-                    <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-md min-w-[240px]">
-                        <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">ESALs DE DISEÑO</div>
-                        <div className="text-4xl font-bold text-blue-600 mb-2">
-                            {formatNum(totalESALsDesign, 0)}
+            {/* Project & Traffic Info Section (Report Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Información del Camino</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Carretera:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.projectName}</span>
                         </div>
-                        <div className="text-slate-600 text-sm font-medium">
-                            1er Año: <span className="text-slate-900">{formatNum(totalESALs1Year, 0)}</span>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Tramo:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.section}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Clasificación oficial:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.roadType.replace('ET_', '')}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Tipo de Red:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.networkType}</span>
                         </div>
                     </div>
                 </div>
-            </header>
 
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="text-slate-500 uppercase font-bold border-b border-slate-200 bg-slate-50">
-                            <tr>
-                                <th className="py-4 px-6">No.</th>
-                                <th className="py-4 px-6">Tipo</th>
-                                <th className="py-4 px-6">Estado</th>
-                                <th className="py-4 px-6 text-right">W(Kip´s)</th>
-                                <th className="py-4 px-6 text-right">Fx</th>
-                                <th className="py-4 px-6 text-right text-orange-600">Esal´s 1er. año</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {esalRows.map((row, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                    <td className="py-3 px-6 text-slate-400">{row.no}</td>
-                                    <td className="py-3 px-6 text-slate-900 font-medium">{row.tipo}</td>
-                                    <td className="py-3 px-6 text-slate-500">{row.estado}</td>
-                                    <td className="py-3 px-6 text-right font-mono text-blue-600">{formatNum(row.lxKip, 1)}</td>
-                                    <td className="py-3 px-6 text-right font-mono text-emerald-600">{formatNum(row.fx, 4)}</td>
-                                    <td className="py-3 px-6 text-right font-mono text-orange-600">{formatNum(row.esalAnio, 0)}</td>
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Información de Tránsito</h3>
+                    <div className="space-y-3">
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">TDPA:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.tdpa.toLocaleString()} Vehículos</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">% Vehículos Cargados (Pvc):</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.pvc}%</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Carriles por sentido:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.lanes}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-100 pb-1">
+                            <span className="text-slate-500 text-sm">Periodo de diseño:</span>
+                            <span className="text-slate-900 font-bold text-sm">{genData.designPeriod} años</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                {/* Left: Summary and Composition */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-blue-600 text-white p-6 rounded-2xl shadow-xl shadow-blue-200">
+                        <div className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mb-1">ESALs de Diseño Totales</div>
+                        <div className="text-4xl font-black mb-4">
+                            {formatNum(totalESALsDesign, 0)}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-blue-500/50">
+                            <div>
+                                <div className="text-blue-200 text-[10px] font-bold uppercase">1er Año</div>
+                                <div className="text-lg font-bold">{formatNum(totalESALs1Year, 0)}</div>
+                            </div>
+                            <div>
+                                <div className="text-blue-200 text-[10px] font-bold uppercase">Factor Crec.</div>
+                                <div className="text-lg font-bold">{formatNum(growthFactor, 2)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Composición Vehicular</h4>
+                        </div>
+                        <table className="w-full text-xs">
+                            <thead className="bg-slate-50 text-slate-400 uppercase font-bold">
+                                <tr>
+                                    <th className="px-4 py-2 text-left">Tipo</th>
+                                    <th className="px-4 py-2 text-right">%</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                        <tfoot className="border-t border-slate-200 font-bold bg-slate-50">
-                            <tr>
-                                <td colSpan={5} className="py-6 px-6 text-right text-slate-500 text-base">Total ESAL's 1er Año:</td>
-                                <td className="py-6 px-6 text-right text-orange-600 font-mono text-2xl">{formatNum(totalESALs1Year, 0)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {compData.map((val, idx) => {
+                                    if (val <= 0) return null;
+                                    return (
+                                        <tr key={idx}>
+                                            <td className="px-4 py-2 text-slate-700 font-medium">{VEHICLE_NAMES[idx]}</td>
+                                            <td className="px-4 py-2 text-right font-mono text-slate-900">{val.toFixed(2)}%</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="bg-white border border-blue-200 p-6 rounded-xl shadow-sm">
+                        <label className="block text-[10px] uppercase tracking-widest text-blue-600 font-bold mb-2">SN (Nº Estructural Sugerido)</label>
+                        <div className="flex items-center gap-3">
+                             <input
+                                type="number"
+                                value={genData.snSeed}
+                                onChange={handleChangeSN}
+                                step="0.1"
+                                min="0"
+                                className="text-3xl font-black text-slate-900 border-none focus:ring-0 w-full p-0 bg-transparent"
+                            />
+                            <span className="text-slate-300 text-2xl">|</span>
+                            <div className="text-slate-400 text-xs italic">Ajuste este valor para recalcular Fx</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Detailed Table */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div className="bg-slate-100 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Desglose de Ejes Equivalentes</h4>
+                            <div className="text-[10px] text-slate-400">Pt = {genData.finalServiceability}</div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                                <thead className="text-slate-500 uppercase font-bold border-b border-slate-200 bg-slate-50">
+                                    <tr>
+                                        <th className="py-3 px-4">No.</th>
+                                        <th className="py-3 px-4">Tipo</th>
+                                        <th className="py-3 px-4">Estado</th>
+                                        <th className="py-3 px-4 text-right">W(Kip´s)</th>
+                                        <th className="py-3 px-4 text-right">Fx</th>
+                                        <th className="py-3 px-4 text-right text-orange-600">Esal´s 1er. año</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {esalRows.map((row, idx) => (
+                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-2 px-4 text-slate-400">{row.no}</td>
+                                            <td className="py-2 px-4 text-slate-900 font-medium">{row.tipo}</td>
+                                            <td className="py-2 px-4 text-slate-500">{row.estado}</td>
+                                            <td className="py-2 px-4 text-right font-mono text-blue-600">{formatNum(row.lxKip, 1)}</td>
+                                            <td className="py-2 px-4 text-right font-mono text-emerald-600">{formatNum(row.fx, 4)}</td>
+                                            <td className="py-2 px-4 text-right font-mono text-orange-600">{formatNum(row.esalAnio, 0)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot className="border-t border-slate-200 font-bold bg-slate-50">
+                                    <tr>
+                                        <td colSpan={5} className="py-4 px-4 text-right text-slate-500">Total ESAL's 1er Año:</td>
+                                        <td className="py-4 px-4 text-right text-orange-600 font-mono text-xl">{formatNum(totalESALs1Year, 0)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 

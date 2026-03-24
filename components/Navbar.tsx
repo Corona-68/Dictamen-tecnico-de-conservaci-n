@@ -46,6 +46,10 @@ const Navbar: React.FC = () => {
               <i className="fas fa-truck-moving text-sm md:text-lg"></i> 
               <span>ESAL's</span>
             </NavLink>
+            <NavLink to="/unam" className={getLinkClass}>
+              <i className="fas fa-university text-sm md:text-lg"></i> 
+              <span>UNAM</span>
+            </NavLink>
             
             {/* Botón de Imprimir */}
             <button 

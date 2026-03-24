@@ -41,6 +41,24 @@ const GeneralDataPage: React.FC = () => {
 
   // -- ESAL Calculation State --
   const [compData, setCompData] = useState<number[]>(DEFAULT_COMPOSITION);
+  const [tabularInput, setTabularInput] = useState('');
+
+  const handleApplyTabular = () => {
+    const values = tabularInput.trim().split(/[\s\t,]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+    if (values.length === 7) {
+      const newComp = [...compData];
+      const indices = [0, 1, 5, 7, 14, 15, 24];
+      indices.forEach((idx, i) => {
+        newComp[idx] = values[i];
+      });
+      setCompData(newComp);
+      localStorage.setItem('compVehData', JSON.stringify(newComp));
+      setTabularInput('');
+      alert("Composición actualizada con éxito (7 vehículos)");
+    } else {
+      alert("Por favor ingrese exactamente 7 valores numéricos (A, B, C2, C3, T3S2, T3S3, T3S2R4) separados por espacios o tabulaciones.");
+    }
+  };
 
   // -- Layer Property Calculator State --
   const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
@@ -561,10 +579,10 @@ const GeneralDataPage: React.FC = () => {
             </div>
 
             <div>
-              <label className={LabelClass}>Tipo de Camino (para cargas máximas)</label>
+              <label className={LabelClass}>Clasificación oficial (para cargas máximas)</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                 {[
-                    { val: 'ET_A', label: 'Tipo ET / A' },
+                    { val: 'ET_A', label: 'Tipo A' },
                     { val: 'B', label: 'Tipo B' },
                     { val: 'C', label: 'Tipo C' },
                     { val: 'D', label: 'Tipo D' }
@@ -582,7 +600,37 @@ const GeneralDataPage: React.FC = () => {
                       name="roadType"
                       value={opt.val}
                       checked={formData.roadType === opt.val}
-                      onChange={() => handleRadioChange('roadType', opt.val)}
+                      onChange={() => handleRadioChange('roadType', opt.val as any)}
+                      className="hidden"
+                    />
+                    <span className="font-medium text-sm text-center">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={LabelClass}>Tipo de Red (DGCC)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                {[
+                    { val: 'Corredor', label: 'Corredor' },
+                    { val: 'Red Básica', label: 'Red Básica' },
+                    { val: 'Red Secundaria', label: 'Red Secundaria' }
+                ].map((opt) => (
+                  <label 
+                    key={opt.val} 
+                    className={`cursor-pointer flex flex-col items-center justify-center p-3 rounded border transition-all active:scale-95 ${
+                        formData.networkType === opt.val 
+                        ? 'bg-blue-50 border-blue-500 text-blue-600' 
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="networkType"
+                      value={opt.val}
+                      checked={formData.networkType === opt.val}
+                      onChange={() => handleRadioChange('networkType', opt.val as any)}
                       className="hidden"
                     />
                     <span className="font-medium text-sm text-center">{opt.label}</span>
@@ -666,33 +714,24 @@ const GeneralDataPage: React.FC = () => {
                      </div>
 
                     <div>
-                        <label className={LabelClass}>Número de Carriles (sentido)</label>
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                        {[
-                            { val: '1', label: '1' },
-                            { val: '2', label: '2' },
-                            { val: '3+', label: '3+' }
-                        ].map((opt) => (
-                            <label 
-                                key={opt.val}
-                                className={`cursor-pointer flex items-center justify-center p-3 rounded border transition-all active:scale-95 ${
-                                    formData.lanes === opt.val 
-                                    ? 'bg-emerald-50 border-emerald-500 text-emerald-600' 
-                                    : 'bg-white border-slate-200 hover:bg-slate-50'
-                                }`}
+                        <label className={LabelClass}>Ingreso Tabular (7 Vehículos: A, B, C2, C3, T3S2, T3S3, T3S2R4)</label>
+                        <div className="flex gap-2 mt-1">
+                            <input
+                                type="text"
+                                value={tabularInput}
+                                onChange={(e) => setTabularInput(e.target.value)}
+                                placeholder="Ej: 85 2 2 2 2 5 2"
+                                className={InputClass}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleApplyTabular}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded font-bold transition-colors shadow-sm whitespace-nowrap"
                             >
-                                <input
-                                    type="radio"
-                                    name="lanes"
-                                    value={opt.val}
-                                    checked={formData.lanes === opt.val}
-                                    onChange={() => handleRadioChange('lanes', opt.val)}
-                                    className="hidden"
-                                />
-                                <span className="font-medium">{opt.label}</span>
-                            </label>
-                        ))}
+                                Aplicar
+                            </button>
                         </div>
+                        <p className="text-[10px] text-slate-400 mt-1">Pegue los 7 valores separados por espacios o tabulaciones.</p>
                     </div>
                 </div>
             </div>
@@ -774,6 +813,36 @@ const GeneralDataPage: React.FC = () => {
                              </div>
                         </div>
                     </div>
+
+                    <div className="mt-2">
+                        <label className={LabelClass}>Número de Carriles (sentido)</label>
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                        {[
+                            { val: '1', label: '1' },
+                            { val: '2', label: '2' },
+                            { val: '3+', label: '3+' }
+                        ].map((opt) => (
+                            <label 
+                                key={opt.val}
+                                className={`cursor-pointer flex items-center justify-center p-3 rounded border transition-all active:scale-95 ${
+                                    formData.lanes === opt.val 
+                                    ? 'bg-blue-50 border-blue-500 text-blue-600' 
+                                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                                }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="lanes"
+                                    value={opt.val}
+                                    checked={formData.lanes === opt.val}
+                                    onChange={() => handleRadioChange('lanes', opt.val)}
+                                    className="hidden"
+                                />
+                                <span className="font-medium">{opt.label}</span>
+                            </label>
+                        ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -826,12 +895,15 @@ const GeneralDataPage: React.FC = () => {
 
             {/* Dynamic Layers List */}
             <div className="space-y-4">
-                <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 uppercase px-1">
-                    <div className="col-span-1 text-center">#</div>
-                    <div className="col-span-5 md:col-span-5">Capa</div>
-                    <div className="col-span-3 md:col-span-3">Módulo (psi)</div>
-                    <div className="col-span-2 md:col-span-2 text-center">Aporte</div>
-                    <div className="col-span-1"></div>
+                <div className="flex justify-between items-center mb-2">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 flex-grow">
+                        <div className="col-span-1 text-center">#</div>
+                        <div className="col-span-4 md:col-span-4">Capa</div>
+                        <div className="col-span-3 md:col-span-3">Módulo (psi)</div>
+                        <div className="col-span-2 md:col-span-2 text-center">Aporte (a)</div>
+                        <div className="col-span-2 md:col-span-2 text-center">Drenaje (m)</div>
+                    </div>
+                    <div className="w-8"></div>
                 </div>
 
                 {formData.layers?.map((layer, index) => (
@@ -839,14 +911,16 @@ const GeneralDataPage: React.FC = () => {
                         <div className="col-span-1 text-center font-bold text-slate-400">
                             {index + 1}
                         </div>
-                        <div className="col-span-11 md:col-span-5 mb-2 md:mb-0">
+                        <div className="col-span-11 md:col-span-4 mb-2 md:mb-0">
                             <select
                                 value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name}
                                 onChange={(e) => handleLayerChange(layer.id, 'name', e.target.value)}
                                 className={`${InputClass} py-2 text-sm ${layer.customCode ? 'text-purple-600' : ''}`}
                             >
                                 {LAYER_CATALOG.map(cat => (
-                                    <option key={cat.name} value={cat.name}>{cat.name}</option>
+                                    <option key={cat.name} value={cat.name}>
+                                        {cat.name === CUSTOM_LAYER_NAME && layer.customCode ? `${layer.name} (${layer.customCode})` : cat.name}
+                                    </option>
                                 ))}
                             </select>
                             {layer.customCode && <div className="text-[10px] text-purple-500 mt-1 pl-1">Personalizada: {layer.name} ({layer.customCode})</div>}
@@ -875,7 +949,17 @@ const GeneralDataPage: React.FC = () => {
                                 disabled={!!layer.customCode}
                             />
                         </div>
-                         <div className="col-span-3 md:col-span-1 flex justify-center gap-1">
+                        <div className="col-span-3 md:col-span-1">
+                             <input 
+                                type="number" 
+                                value={layer.m}
+                                step="0.01"
+                                onChange={(e) => handleLayerChange(layer.id, 'm', parseFloat(e.target.value))}
+                                className={`${InputClass} py-2 text-sm text-center font-mono`}
+                                disabled={!!layer.customCode}
+                            />
+                        </div>
+                         <div className="col-span-12 md:col-span-1 flex justify-center gap-1 mt-2 md:mt-0">
                             <button
                                 type="button"
                                 onClick={() => handleOpenCalc(layer)}
@@ -904,14 +988,14 @@ const GeneralDataPage: React.FC = () => {
                         onClick={() => handleAddLayer('top')}
                         className="py-3 border-2 border-dashed border-slate-200 rounded-lg text-slate-500 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 font-semibold"
                     >
-                        <i className="fas fa-arrow-up"></i> Adicionar por arriba
+                        <i className="fas fa-plus-circle"></i> Adicionar capa (Arriba)
                     </button>
                     <button
                         type="button"
                         onClick={() => handleAddLayer('bottom')}
                         className="py-3 border-2 border-dashed border-slate-200 rounded-lg text-slate-500 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2 font-semibold"
                     >
-                        <i className="fas fa-arrow-down"></i> Adicionar por abajo
+                        <i className="fas fa-plus-circle"></i> Adicionar capa (Abajo)
                     </button>
                 </div>
             </div>

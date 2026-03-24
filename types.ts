@@ -11,6 +11,7 @@ export interface GeneralData {
   projectName: string;
   section: string;
   roadType: 'ET_A' | 'B' | 'C' | 'D';
+  networkType: 'Corredor' | 'Red Básica' | 'Red Secundaria';
   tdpa: number;
   pvc: number;
   lanes: '1' | '2' | '3+';
