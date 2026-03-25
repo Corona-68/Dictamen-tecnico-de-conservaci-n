@@ -1030,8 +1030,8 @@ const GeneralDataPage: React.FC = () => {
 
       {/* LAYER PROPERTY CALCULATOR MODAL */}
       {isCalcModalOpen && calcLayerData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6 my-auto">
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Calculadora de Capa</h3>
                   <p className="text-slate-500 text-sm mb-6">{calcLayerData.name}</p>
                   
@@ -1115,8 +1115,8 @@ const GeneralDataPage: React.FC = () => {
 
       {/* CUSTOM LAYER MODAL */}
       {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6 my-auto">
                   <h3 className="text-xl font-bold text-slate-900 mb-4">Nueva Capa Personalizada</h3>
                   
                   <div className="space-y-4">
@@ -1197,8 +1197,8 @@ const GeneralDataPage: React.FC = () => {
       {/* FWD CALCULATOR MODAL */}
       {isFwdModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/50 backdrop-blur-sm overflow-y-auto">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-2xl my-auto">
-                  <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-2xl my-auto max-h-[90vh] flex flex-col">
+                  <div className="p-6 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                           <i className="fas fa-wave-square text-blue-600"></i> Cálculo de MR por Deflexiones
                       </h3>
@@ -1207,7 +1207,7 @@ const GeneralDataPage: React.FC = () => {
                       </button>
                   </div>
                   
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
                       <div className="space-y-4">
                           <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Parámetros FWD</h4>
                           <div className="grid grid-cols-2 gap-4">
@@ -1338,8 +1338,8 @@ const GeneralDataPage: React.FC = () => {
       {/* GROWTH RATE CALCULATOR MODAL */}
       {isGrowthModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/50 backdrop-blur-sm overflow-y-auto">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-4xl my-auto">
-                  <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-4xl my-auto max-h-[90vh] flex flex-col">
+                  <div className="p-6 border-b border-slate-200 flex justify-between items-center shrink-0">
                       <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                           <i className="fas fa-chart-line text-emerald-600"></i> Calculadora de Tasa de Crecimiento
                       </h3>
@@ -1366,7 +1366,7 @@ const GeneralDataPage: React.FC = () => {
                       </div>
                   </div>
                   
-                  <div className="p-6">
+                  <div className="p-6 overflow-y-auto">
                       {!showGrowthGraph ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-4">
@@ -1450,7 +1450,7 @@ const GeneralDataPage: React.FC = () => {
                       ) : (
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                               <div className="lg:col-span-2 flex flex-col gap-4">
-                                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-[350px]">
+                                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-[300px] md:h-[350px]">
                                       <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Gráfica de Tendencia (TDPA vs Tiempo)</h4>
                                       <ResponsiveContainer width="100%" height="90%">
                                           <LineChart data={growthChartData}>
@@ -1557,7 +1557,7 @@ const GeneralDataPage: React.FC = () => {
                                   </div>
                               </div>
 
-                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[420px]">
+                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[300px] md:h-[420px]">
                                   <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">Tabla de Datos</h4>
                                   <div className="flex-1 overflow-y-auto custom-scrollbar">
                                       <table className="w-full text-xs">

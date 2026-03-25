@@ -143,34 +143,62 @@ const AxlePage: React.FC = () => {
 
             {/* ---------------- DIRECT MODE TABLE ---------------- */}
             {method === 'direct' && (
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-8">
-                    <table className="w-full text-sm text-left text-slate-600">
-                        <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-3 text-center">No.</th>
-                                <th className="px-6 py-3">Tipo (L2)</th>
-                                <th className="px-6 py-3 text-right">Carga (Lx)</th>
-                                <th className="px-6 py-3 text-right font-bold text-emerald-600">Ejes 1er Año</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {directRows.map((row, index) => (
-                                <tr key={row.id || index} className="hover:bg-slate-50">
-                                    <td className="px-6 py-3 text-center">{index + 1}</td>
-                                    <td className="px-6 py-3">
-                                        {row.l2 === 1 && "Sencillo"}
-                                        {row.l2 === 2 && "Tándem"}
-                                        {row.l2 === 3 && "Trídem"}
-                                    </td>
-                                    <td className="px-6 py-3 text-right font-mono">{row.lxKip} kip</td>
-                                    <td className="px-6 py-3 text-right font-bold text-emerald-600 font-mono">
-                                        {formatNumber(row.count)}
-                                    </td>
+                <>
+                    {/* Desktop Table */}
+                    <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-8">
+                        <table className="w-full text-sm text-left text-slate-600">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-center">No.</th>
+                                    <th className="px-6 py-3">Tipo (L2)</th>
+                                    <th className="px-6 py-3 text-right">Carga (Lx)</th>
+                                    <th className="px-6 py-3 text-right font-bold text-emerald-600">Ejes 1er Año</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {directRows.map((row, index) => (
+                                    <tr key={row.id || index} className="hover:bg-slate-50">
+                                        <td className="px-6 py-3 text-center">{index + 1}</td>
+                                        <td className="px-6 py-3">
+                                            {row.l2 === 1 && "Sencillo"}
+                                            {row.l2 === 2 && "Tándem"}
+                                            {row.l2 === 3 && "Trídem"}
+                                        </td>
+                                        <td className="px-6 py-3 text-right font-mono">{row.lxKip} kip</td>
+                                        <td className="px-6 py-3 text-right font-bold text-emerald-600 font-mono">
+                                            {formatNumber(row.count)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="md:hidden space-y-4 mb-8">
+                        {directRows.map((row, index) => (
+                            <div key={row.id || index} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                                <div className="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
+                                    <div>
+                                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded mr-2">#{index + 1}</span>
+                                        <span className="font-bold text-slate-900 text-lg">
+                                            {row.l2 === 1 && "Sencillo"}
+                                            {row.l2 === 2 && "Tándem"}
+                                            {row.l2 === 3 && "Trídem"}
+                                        </span>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs text-slate-400 mb-0.5">Resultado</div>
+                                        <div className="font-bold text-emerald-600 text-lg">{formatNumber(row.count)}</div>
+                                    </div>
+                                </div>
+                                <div className="text-xs text-slate-500 flex gap-4">
+                                    <span>Carga: <strong className="text-slate-700">{row.lxKip} kip</strong></span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
             )}
 
             {/* ---------------- VEHICLE MODE TABLE ---------------- */}

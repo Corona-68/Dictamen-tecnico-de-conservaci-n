@@ -1140,11 +1140,13 @@ const EsalsPage: React.FC = () => {
 
       {/* CUSTOM LAYER MODAL */}
       {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">Nueva Capa Personalizada</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6 my-auto max-h-[90vh] flex flex-col">
+                  <div className="shrink-0 mb-4">
+                      <h3 className="text-xl font-bold text-slate-900">Nueva Capa Personalizada</h3>
+                  </div>
                   
-                  <div className="space-y-4 text-left">
+                  <div className="space-y-4 text-left overflow-y-auto pr-2">
                       <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Clave (2 letras - para móvil)</label>
                           <input 
@@ -1200,7 +1202,7 @@ const EsalsPage: React.FC = () => {
                       </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 mt-8">
+                  <div className="flex justify-end gap-3 mt-8 shrink-0">
                       <button 
                           onClick={() => setIsModalOpen(false)}
                           className="px-4 py-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
@@ -1221,9 +1223,9 @@ const EsalsPage: React.FC = () => {
 
       {/* LAYER PROPERTY CALCULATOR MODAL */}
       {isCalcModalOpen && calcLayerData && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm no-print">
-              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6">
-                  <div className="flex justify-between items-center mb-6">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm no-print overflow-y-auto">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6 my-auto max-h-[90vh] flex flex-col">
+                  <div className="flex justify-between items-center mb-6 shrink-0">
                       <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                           <i className="fas fa-calculator text-blue-600"></i> Calculadora de Propiedades
                       </h3>
@@ -1232,7 +1234,7 @@ const EsalsPage: React.FC = () => {
                       </button>
                   </div>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-6 overflow-y-auto pr-2">
                       <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre de la Capa</label>
                           <div className="p-3 bg-slate-50 rounded border border-slate-200 font-medium text-slate-700">
@@ -1307,7 +1309,7 @@ const EsalsPage: React.FC = () => {
                       )}
                   </div>
 
-                  <div className="flex justify-end gap-3 mt-8">
+                  <div className="flex justify-end gap-3 mt-8 shrink-0">
                       <button 
                           onClick={() => setIsCalcModalOpen(false)}
                           className="px-4 py-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
