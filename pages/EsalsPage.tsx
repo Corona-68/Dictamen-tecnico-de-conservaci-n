@@ -102,6 +102,7 @@ function inverseNormalCDF(p: number): number {
 // --- STRUCTURE TABLE COMPONENT ---
 const StructureTable = ({ 
     title, 
+    onTitleChange,
     data, 
     genData, 
     handleRealThicknessChange, 
@@ -113,6 +114,7 @@ const StructureTable = ({
     onOpenCalc
 }: { 
     title: string; 
+    onTitleChange?: (newTitle: string) => void;
     data: any; 
     genData: GeneralData; 
     handleRealThicknessChange: (id: string, val: string) => void;
@@ -128,7 +130,15 @@ const StructureTable = ({
     return (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <h3 className="font-bold text-slate-900 text-lg">{title}</h3>
+                <div className="flex-1 mr-4">
+                    <input 
+                        type="text"
+                        value={title}
+                        onChange={(e) => onTitleChange?.(e.target.value)}
+                        className="w-full font-bold text-slate-900 text-lg bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 transition-all"
+                        placeholder="Nombre de la estructura"
+                    />
+                </div>
                 {isEditable && (
                     <button 
                         onClick={onAddLayer}
@@ -409,6 +419,12 @@ const EsalsPage: React.FC = () => {
   const [alt2Layers, setAlt2Layers] = useState<PavementLayer[]>(DEFAULT_ALT2_LAYERS);
   const [isSaved, setIsSaved] = useState(false);
 
+  // -- Custom Titles for Structures --
+  const [titleActual, setTitleActual] = useState("Estructura Actual");
+  const [titleAlt1, setTitleAlt1] = useState("Recuperación + CA");
+  const [titleAlt2, setTitleAlt2] = useState("Fresado + CA");
+  const [titleAlt3, setTitleAlt3] = useState("Riego de sello");
+
   // -- Custom Layer Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
@@ -495,6 +511,10 @@ const EsalsPage: React.FC = () => {
             if (parsed.manualThicknesses) setManualThicknesses(parsed.manualThicknesses);
             if (parsed.alt1Layers) setAlt1Layers(parsed.alt1Layers);
             if (parsed.alt2Layers) setAlt2Layers(parsed.alt2Layers);
+            if (parsed.titleActual) setTitleActual(parsed.titleActual);
+            if (parsed.titleAlt1) setTitleAlt1(parsed.titleAlt1);
+            if (parsed.titleAlt2) setTitleAlt2(parsed.titleAlt2);
+            if (parsed.titleAlt3) setTitleAlt3(parsed.titleAlt3);
         } catch (e) { console.error(e); }
     } else {
         setSnSeed(currentGen.snSeed || 4.0);
@@ -502,7 +522,16 @@ const EsalsPage: React.FC = () => {
   }, []);
 
   const handleSaveCalculations = () => {
-      const dataToSave = { snSeed, manualThicknesses, alt1Layers, alt2Layers };
+      const dataToSave = { 
+          snSeed, 
+          manualThicknesses, 
+          alt1Layers, 
+          alt2Layers,
+          titleActual,
+          titleAlt1,
+          titleAlt2,
+          titleAlt3
+      };
       localStorage.setItem('esalsData', JSON.stringify(dataToSave));
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
@@ -1046,10 +1075,10 @@ const EsalsPage: React.FC = () => {
         startY: 28,
         head: [['Alternativa', 'SN Total', 'W18 Soportado', 'Vida (Años)', 'Cumple']],
         body: [
-            ['Estructura Actual', formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            ['Alternativa 1', formatNum(structureAlt1.snTotalProvided, 2), formatNum(structureAlt1.esalsForSnTotal, 0), formatNum(structureAlt1.remainingLifeYears, 1), structureAlt1.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            ['Alternativa 2', formatNum(structureAlt2.snTotalProvided, 2), formatNum(structureAlt2.esalsForSnTotal, 0), formatNum(structureAlt2.remainingLifeYears, 1), structureAlt2.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            ['Alternativa 3', formatNum(structureAlt3.snTotalProvided, 2), formatNum(structureAlt3.esalsForSnTotal, 0), formatNum(structureAlt3.remainingLifeYears, 1), structureAlt3.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            [titleActual, formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            [titleAlt1, formatNum(structureAlt1.snTotalProvided, 2), formatNum(structureAlt1.esalsForSnTotal, 0), formatNum(structureAlt1.remainingLifeYears, 1), structureAlt1.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            [titleAlt2, formatNum(structureAlt2.snTotalProvided, 2), formatNum(structureAlt2.esalsForSnTotal, 0), formatNum(structureAlt2.remainingLifeYears, 1), structureAlt2.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            [titleAlt3, formatNum(structureAlt3.snTotalProvided, 2), formatNum(structureAlt3.esalsForSnTotal, 0), formatNum(structureAlt3.remainingLifeYears, 1), structureAlt3.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
         ],
         theme: 'striped',
         headStyles: { fillColor: [51, 65, 85] },
@@ -1181,10 +1210,10 @@ const EsalsPage: React.FC = () => {
         doc.text(`Vida Remanente Estimada: ${formatNum(data.remainingLifeYears, 1)} años`, 14, finalY + 25);
     };
 
-    addStructureToPdf("Estructura Actual", structureActual, 1);
-    addStructureToPdf("Alternativa 1: Recuperación + CA", structureAlt1, 2);
-    addStructureToPdf("Alternativa 2: Fresado + CA", structureAlt2, 3);
-    addStructureToPdf("Alternativa 3: Riego de sello", structureAlt3, 4);
+    addStructureToPdf(titleActual, structureActual, 1);
+    addStructureToPdf(titleAlt1, structureAlt1, 2);
+    addStructureToPdf(titleAlt2, structureAlt2, 3);
+    addStructureToPdf(titleAlt3, structureAlt3, 4);
 
     const fileName = genData.projectName 
         ? `${genData.projectName.replace(/[/\\?%*:|"<>]/g, '-')}.pdf` 
@@ -1317,10 +1346,10 @@ const EsalsPage: React.FC = () => {
                           <Bar dataKey="sn" radius={[4, 4, 0, 0]} barSize={45} isAnimationActive={false}>
                               {
                                 [
-                                    { name: 'Actual', sn: structureActual.snTotalProvided, color: '#94a3b8' },
-                                    { name: 'REC+CA', sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
-                                    { name: 'Fresado+CA', sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
-                                    { name: 'Riego sello', sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
+                                    { name: titleActual, sn: structureActual.snTotalProvided, color: '#94a3b8' },
+                                    { name: titleAlt1, sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
+                                    { name: titleAlt2, sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
+                                    { name: titleAlt3, sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
                                 ].map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={1} />
                                 ))
@@ -1344,10 +1373,10 @@ const EsalsPage: React.FC = () => {
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                               {[
-                                  { name: 'Estructura Actual', data: structureActual, color: 'bg-slate-400' },
-                                  { name: 'Alternativa 1', data: structureAlt1, color: 'bg-sky-500' },
-                                  { name: 'Alternativa 2', data: structureAlt2, color: 'bg-violet-500' },
-                                  { name: 'Alternativa 3', data: structureAlt3, color: 'bg-amber-500' },
+                                  { name: titleActual, data: structureActual, color: 'bg-slate-400' },
+                                  { name: titleAlt1, data: structureAlt1, color: 'bg-sky-500' },
+                                  { name: titleAlt2, data: structureAlt2, color: 'bg-violet-500' },
+                                  { name: titleAlt3, data: structureAlt3, color: 'bg-amber-500' },
                               ].map((alt, idx) => (
                                   <tr key={idx} className="hover:bg-slate-50 transition-colors">
                                       <td className="px-4 py-3 font-medium text-slate-700 flex items-center gap-2">
@@ -1557,7 +1586,8 @@ const EsalsPage: React.FC = () => {
       <div className="space-y-12">
           {/* 1. Estructura Actual */}
           <StructureTable 
-            title="Estructura Actual" 
+            title={titleActual} 
+            onTitleChange={setTitleActual}
             data={structureActual} 
             genData={genData} 
             handleRealThicknessChange={handleRealThicknessChange}
@@ -1566,7 +1596,8 @@ const EsalsPage: React.FC = () => {
 
           {/* 2. Alternativa 1: Recuperación + CA */}
           <StructureTable 
-            title="Recuperación + CA" 
+            title={titleAlt1} 
+            onTitleChange={setTitleAlt1}
             data={structureAlt1} 
             genData={genData} 
             handleRealThicknessChange={(id, val) => handleRealThicknessChange(id, val, 1)}
@@ -1580,7 +1611,8 @@ const EsalsPage: React.FC = () => {
 
           {/* 3. Alternativa 2: Fresado + CA */}
           <StructureTable 
-            title="Fresado + CA" 
+            title={titleAlt2} 
+            onTitleChange={setTitleAlt2}
             data={structureAlt2} 
             genData={genData} 
             handleRealThicknessChange={(id, val) => handleRealThicknessChange(id, val, 2)}
@@ -1594,7 +1626,8 @@ const EsalsPage: React.FC = () => {
 
           {/* 4. Alternativa 3: Riego de sello */}
           <StructureTable 
-            title="Riego de sello" 
+            title={titleAlt3} 
+            onTitleChange={setTitleAlt3}
             data={structureAlt3} 
             genData={genData} 
             handleRealThicknessChange={handleRealThicknessChange}
