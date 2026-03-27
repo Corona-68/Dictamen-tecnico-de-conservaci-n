@@ -1308,10 +1308,10 @@ const EsalsPage: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                           data={[
-                              { name: 'Actual', sn: structureActual.snTotalProvided, color: '#94a3b8' },
-                              { name: 'REC+CA', sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
-                              { name: 'Fresado+CA', sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
-                              { name: 'Riego sello', sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
+                              { name: titleActual, sn: structureActual.snTotalProvided, color: '#94a3b8' },
+                              { name: titleAlt1, sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
+                              { name: titleAlt2, sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
+                              { name: titleAlt3, sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
                           ]}
                           margin={{ top: 30, right: 50, left: 20, bottom: 60 }}
                       >
@@ -1417,10 +1417,10 @@ const EsalsPage: React.FC = () => {
                   <BarChart
                       data={(() => {
                           const structures = [
-                              { name: 'Actual', data: structureActual, borderColor: '#000' },
-                              { name: 'REC+CA', data: structureAlt1, borderColor: '#000' },
-                              { name: 'Fresado+CA', data: structureAlt2, borderColor: '#000' },
-                              { name: 'Riego sello', data: structureAlt3, borderColor: '#000' },
+                              { name: titleActual, data: structureActual, borderColor: '#000' },
+                              { name: titleAlt1, data: structureAlt1, borderColor: '#000' },
+                              { name: titleAlt2, data: structureAlt2, borderColor: '#000' },
+                              { name: titleAlt3, data: structureAlt3, borderColor: '#000' },
                           ];
 
                           const getLayerColor = (name: string) => {
