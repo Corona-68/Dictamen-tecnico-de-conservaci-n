@@ -145,51 +145,90 @@ const UnamPage: React.FC = () => {
                 </div>
             ) : (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-8">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-slate-600">
-                            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-center">NO.</th>
-                                    <th className="px-4 py-3">TIPO</th>
-                                    <th className="px-4 py-3">ESTADO</th>
-                                    <th className="px-4 py-3 text-right">W(TON)</th>
-                                    <th className="px-4 py-3 text-right">EJES 1er AÑO</th>
-                                    <th className="px-4 py-3 text-right">Daño Unitario</th>
-                                    <th className="px-4 py-3 text-right">EjesEquiv.1er.año</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {vehicleResults.map((row, index) => {
-                                    const wTon = getWton(row);
-                                    const damage = calculateUnamDamage(wTon, row.tipo, index, zDepth);
-                                    const equiv = row.result * damage;
-                                    
-                                    return (
-                                        <tr key={index} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3 text-center">{row.no}</td>
-                                            <td className="px-4 py-3 font-medium text-slate-900">{row.tipo}</td>
-                                            <td className="px-4 py-3">{row.estado}</td>
-                                            <td className="px-4 py-3 text-right font-mono">{wTon.toFixed(1)}</td>
-                                            <td className="px-4 py-3 text-right font-mono">{formatNumber(row.result)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-blue-600 font-bold">{formatDecimal(damage)}</td>
-                                            <td className="px-4 py-3 text-right font-mono text-emerald-600 font-bold">{formatNumber(equiv)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            <tfoot className="bg-slate-50 font-bold">
-                                <tr>
-                                    <td colSpan={4} className="px-4 py-3 text-right text-slate-500 uppercase text-xs">Totales</td>
-                                    <td className="px-4 py-3 text-right font-mono">
+                    <div className="p-4">
+                        {/* Header - Desktop Only */}
+                        <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-4 mb-2">
+                            <div className="col-span-1 text-center">NO.</div>
+                            <div className="col-span-2">TIPO</div>
+                            <div className="col-span-2">ESTADO</div>
+                            <div className="col-span-1 text-right">W(TON)</div>
+                            <div className="col-span-2 text-right">EJES 1er AÑO</div>
+                            <div className="col-span-2 text-right">Daño Unitario</div>
+                            <div className="col-span-2 text-right">EjesEquiv.1er.año</div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {vehicleResults.map((row, index) => {
+                                const wTon = getWton(row);
+                                const damage = calculateUnamDamage(wTon, row.tipo, index, zDepth);
+                                const equiv = row.result * damage;
+                                
+                                return (
+                                    <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm md:border-none md:p-0 md:shadow-none">
+                                        {/* Mobile Header */}
+                                        <div className="flex justify-between items-center md:hidden mb-4 border-b border-slate-100 pb-2">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Registro #{row.no}</span>
+                                            <span className="text-sm font-bold text-slate-900">{row.tipo}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-2 items-center">
+                                            {/* NO - Desktop Only */}
+                                            <div className="hidden md:block col-span-1 text-center text-slate-400">{row.no}</div>
+                                            
+                                            {/* TIPO - Desktop Only */}
+                                            <div className="hidden md:block col-span-2 font-medium text-slate-900">{row.tipo}</div>
+
+                                            {/* ESTADO */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Estado</label>
+                                                <div className="text-sm text-slate-700">{row.estado}</div>
+                                            </div>
+
+                                            {/* W(TON) */}
+                                            <div className="md:col-span-1">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">W(TON)</label>
+                                                <div className="text-sm font-mono text-right">{wTon.toFixed(1)}</div>
+                                            </div>
+
+                                            {/* EJES 1er AÑO */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">EJES 1er AÑO</label>
+                                                <div className="text-sm font-mono text-right">{formatNumber(row.result)}</div>
+                                            </div>
+
+                                            {/* Daño Unitario */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">Daño Unitario</label>
+                                                <div className="text-sm font-mono text-right text-blue-600 font-bold">{formatDecimal(damage)}</div>
+                                            </div>
+
+                                            {/* EjesEquiv.1er.año */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">EjesEquiv.1er.año</label>
+                                                <div className="text-sm font-mono text-right text-emerald-600 font-bold">{formatNumber(equiv)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 px-4">
+                            <div className="flex justify-between w-full md:w-auto gap-8">
+                                <div className="text-center md:text-left">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase">Total Ejes 1er Año</div>
+                                    <div className="text-lg font-bold text-slate-900 font-mono">
                                         {formatNumber(vehicleResults.reduce((sum, r) => sum + r.result, 0))}
-                                    </td>
-                                    <td className="px-4 py-3"></td>
-                                    <td className="px-4 py-3 text-right font-mono text-emerald-600">
+                                    </div>
+                                </div>
+                                <div className="text-center md:text-right">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase">Total Ejes Equiv.</div>
+                                    <div className="text-lg font-bold text-emerald-600 font-mono">
                                         {formatNumber(totalEquiv1stYear)}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

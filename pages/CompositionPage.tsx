@@ -309,24 +309,41 @@ const CompositionPage: React.FC = () => {
                       </button>
                   </div>
                   
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-600">
-                        <thead className="bg-slate-100 text-slate-700 uppercase text-xs">
-                            <tr>
-                                <th className="px-4 py-3 text-center w-16">No.</th>
-                                <th className="px-4 py-3 w-40">Tipo de Eje (L2)</th>
-                                <th className="px-4 py-3 text-right">Carga LX (kip)</th>
-                                <th className="px-4 py-3 text-right">Ejes 1er Año</th>
-                                <th className="px-4 py-3 text-center w-16"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200">
-                            {directRows.map((row, index) => (
-                                <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-4 py-3 text-center font-mono text-slate-400">
+                  <div className="p-4">
+                    {/* Header - Desktop Only */}
+                    <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-4 mb-2">
+                        <div className="col-span-1 text-center">No.</div>
+                        <div className="col-span-3">Tipo de Eje (L2)</div>
+                        <div className="col-span-3 text-right">Carga LX (kip)</div>
+                        <div className="col-span-4 text-right">Ejes 1er Año</div>
+                        <div className="col-span-1"></div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {directRows.map((row, index) => (
+                            <div key={row.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm md:border-none md:p-0 md:shadow-none">
+                                {/* Mobile Header */}
+                                <div className="flex justify-between items-center md:hidden mb-4 border-b border-slate-100 pb-2">
+                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Eje #{index + 1}</span>
+                                    {directRows.length > 1 && (
+                                        <button 
+                                            onClick={() => handleRemoveRow(row.id)}
+                                            className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 transition-colors"
+                                        >
+                                            <i className="fas fa-trash-alt"></i>
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-2 items-center">
+                                    {/* Index - Desktop Only */}
+                                    <div className="hidden md:block col-span-1 text-center font-mono text-slate-400">
                                         {index + 1}
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    </div>
+
+                                    {/* Axle Type */}
+                                    <div className="md:col-span-3">
+                                        <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo de Eje (L2)</label>
                                         <select 
                                             value={row.l2}
                                             onChange={(e) => handleRowChange(row.id, 'l2', parseInt(e.target.value) as 1|2|3)}
@@ -336,8 +353,11 @@ const CompositionPage: React.FC = () => {
                                             <option value={2}>2 - Tándem</option>
                                             <option value={3}>3 - Trídem</option>
                                         </select>
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    </div>
+
+                                    {/* Load */}
+                                    <div className="md:col-span-3">
+                                        <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">Carga LX (kip)</label>
                                         <input 
                                             type="number"
                                             min="0"
@@ -345,8 +365,11 @@ const CompositionPage: React.FC = () => {
                                             onChange={(e) => handleRowChange(row.id, 'lxKip', parseFloat(e.target.value))}
                                             className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-right text-slate-900 focus:border-emerald-500 focus:outline-none font-mono"
                                         />
-                                    </td>
-                                    <td className="px-4 py-3">
+                                    </div>
+
+                                    {/* Count */}
+                                    <div className="md:col-span-4">
+                                        <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">Ejes 1er Año</label>
                                         <input 
                                             type="number"
                                             min="0"
@@ -354,8 +377,10 @@ const CompositionPage: React.FC = () => {
                                             onChange={(e) => handleRowChange(row.id, 'count', parseFloat(e.target.value))}
                                             className="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-right text-slate-900 focus:border-emerald-500 focus:outline-none font-mono"
                                         />
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
+                                    </div>
+
+                                    {/* Actions - Desktop Only */}
+                                    <div className="hidden md:flex col-span-1 justify-center">
                                         {directRows.length > 1 && (
                                             <button 
                                                 onClick={() => handleRemoveRow(row.id)}
@@ -364,22 +389,20 @@ const CompositionPage: React.FC = () => {
                                                 <i className="fas fa-trash-alt"></i>
                                             </button>
                                         )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        {directRows.length > 0 && (
-                            <tfoot className="bg-slate-50 font-bold text-slate-700">
-                                <tr>
-                                    <td colSpan={3} className="px-4 py-3 text-right">TOTAL EJES:</td>
-                                    <td className="px-4 py-3 text-right text-emerald-600">
-                                        {Math.round(directRows.reduce((acc, r) => acc + (r.count || 0), 0)).toLocaleString()}
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        )}
-                    </table>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {directRows.length > 0 && (
+                        <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center px-4">
+                            <span className="text-sm font-bold text-slate-500 uppercase">Total Ejes:</span>
+                            <span className="text-xl font-black text-emerald-600 font-mono">
+                                {Math.round(directRows.reduce((acc, r) => acc + (r.count || 0), 0)).toLocaleString()}
+                            </span>
+                        </div>
+                    )}
                   </div>
               </div>
           </div>

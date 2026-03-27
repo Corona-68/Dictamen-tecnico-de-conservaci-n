@@ -32,6 +32,8 @@ export const DEFAULT_GENERAL_DATA: GeneralData = {
     designPeriod: 10,
     growthRate: 2,
     snSeed: 4.0,
+    diagnosis: "",
+    asphaltGrade: "70H-16",
     
     // Default Pavement Structure
     rigidityLevel: 'low',

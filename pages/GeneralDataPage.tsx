@@ -847,6 +847,35 @@ const GeneralDataPage: React.FC = () => {
             </div>
         </div>
 
+        {/* Section 3.5: Physical Diagnosis (New) */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-notes-medical text-blue-600"></i> Descripción o diagnóstico del estado físico del tramo
+            </h3>
+            <textarea
+                name="diagnosis"
+                value={formData.diagnosis || ""}
+                onChange={handleChange}
+                placeholder="Ingrese aquí la descripción o diagnóstico del estado físico del tramo..."
+                className={`${InputClass} min-h-[120px] resize-y`}
+            />
+        </div>
+
+        {/* Section 3.6: Required Asphalt Grade (New) */}
+        <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+             <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-oil-can text-amber-600"></i> Tipo de asfalto requerido grado PG
+            </h3>
+            <input
+                type="text"
+                name="asphaltGrade"
+                value={formData.asphaltGrade || ""}
+                onChange={handleChange}
+                placeholder="Ej: 70H-16"
+                className={InputClass}
+            />
+        </div>
+
         {/* Section 4: Pavement Structure (New) */}
         <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -895,89 +924,135 @@ const GeneralDataPage: React.FC = () => {
 
             {/* Dynamic Layers List */}
             <div className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
+                {/* Header - Desktop Only */}
+                <div className="hidden md:flex justify-between items-center mb-2">
                     <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 flex-grow">
                         <div className="col-span-1 text-center">#</div>
-                        <div className="col-span-4 md:col-span-4">Capa</div>
-                        <div className="col-span-3 md:col-span-3">Módulo (psi)</div>
-                        <div className="col-span-2 md:col-span-2 text-center">Aporte (a)</div>
-                        <div className="col-span-2 md:col-span-2 text-center">Drenaje (m)</div>
+                        <div className="col-span-4">Capa</div>
+                        <div className="col-span-3">Módulo (psi)</div>
+                        <div className="col-span-2 text-center">Aporte (a)</div>
+                        <div className="col-span-2 text-center">Drenaje (m)</div>
                     </div>
                     <div className="w-8"></div>
                 </div>
 
                 {formData.layers?.map((layer, index) => (
-                    <div key={layer.id} className={`grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border ${layer.customCode ? 'border-purple-300 shadow-sm shadow-purple-100' : 'border-slate-200'}`}>
-                        <div className="col-span-1 text-center font-bold text-slate-400">
-                            {index + 1}
-                        </div>
-                        <div className="col-span-11 md:col-span-4 mb-2 md:mb-0">
-                            <select
-                                value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name}
-                                onChange={(e) => handleLayerChange(layer.id, 'name', e.target.value)}
-                                className={`${InputClass} py-2 text-sm ${layer.customCode ? 'text-purple-600' : ''}`}
-                            >
-                                {LAYER_CATALOG.map(cat => (
-                                    <option key={cat.name} value={cat.name}>
-                                        {cat.name === CUSTOM_LAYER_NAME && layer.customCode ? `${layer.name} (${layer.customCode})` : cat.name}
-                                    </option>
-                                ))}
-                            </select>
-                            {layer.customCode && <div className="text-[10px] text-purple-500 mt-1 pl-1">Personalizada: {layer.name} ({layer.customCode})</div>}
-                        </div>
-                        <div className="col-span-5 md:col-span-3 pl-2 md:pl-0">
-                            <input 
-                                type="text" 
-                                value={layer.mr.toLocaleString('en-US')}
-                                onChange={(e) => {
-                                    const rawValue = e.target.value.replace(/,/g, '');
-                                    const numValue = parseFloat(rawValue);
-                                    handleLayerChange(layer.id, 'mr', isNaN(numValue) ? 0 : numValue);
-                                }}
-                                className={`${InputClass} py-2 text-sm font-mono`}
-                                readOnly={!!layer.customCode}
-                                disabled={!!layer.customCode}
-                            />
-                        </div>
-                        <div className="col-span-4 md:col-span-2">
-                             <input 
-                                type="number" 
-                                value={layer.a}
-                                step="0.01"
-                                onChange={(e) => handleLayerChange(layer.id, 'a', parseFloat(e.target.value))}
-                                className={`${InputClass} py-2 text-sm text-center font-mono`}
-                                disabled={!!layer.customCode}
-                            />
-                        </div>
-                        <div className="col-span-3 md:col-span-1">
-                             <input 
-                                type="number" 
-                                value={layer.m}
-                                step="0.01"
-                                onChange={(e) => handleLayerChange(layer.id, 'm', parseFloat(e.target.value))}
-                                className={`${InputClass} py-2 text-sm text-center font-mono`}
-                                disabled={!!layer.customCode}
-                            />
-                        </div>
-                         <div className="col-span-12 md:col-span-1 flex justify-center gap-1 mt-2 md:mt-0">
-                            <button
-                                type="button"
-                                onClick={() => handleOpenCalc(layer)}
-                                className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50"
-                                title="Calcular propiedades"
-                            >
-                                <i className="fas fa-calculator"></i>
-                            </button>
-                            {formData.layers.length > 1 && (
+                    <div key={layer.id} className={`bg-white p-4 rounded-xl border transition-all ${layer.customCode ? 'border-purple-300 shadow-sm shadow-purple-100' : 'border-slate-200 shadow-sm'}`}>
+                        {/* Mobile Header */}
+                        <div className="flex justify-between items-center md:hidden mb-4 border-b border-slate-100 pb-2">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Capa #{index + 1}</span>
+                            <div className="flex gap-1">
                                 <button
                                     type="button"
-                                    onClick={() => handleRemoveLayer(layer.id)}
-                                    className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50"
-                                    title="Eliminar capa"
+                                    onClick={() => handleOpenCalc(layer)}
+                                    className="text-blue-600 hover:text-blue-700 p-2 rounded hover:bg-blue-50"
+                                    title="Calcular propiedades"
                                 >
-                                    <i className="fas fa-trash-alt"></i>
+                                    <i className="fas fa-calculator"></i>
                                 </button>
-                            )}
+                                {formData.layers.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveLayer(layer.id)}
+                                        className="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50"
+                                        title="Eliminar capa"
+                                    >
+                                        <i className="fas fa-trash-alt"></i>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Desktop & Mobile Content */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-2 items-center">
+                            {/* Index - Desktop Only */}
+                            <div className="hidden md:block col-span-1 text-center font-bold text-slate-400">
+                                {index + 1}
+                            </div>
+
+                            {/* Name/Select */}
+                            <div className="md:col-span-4">
+                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo de Capa</label>
+                                <select
+                                    value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name}
+                                    onChange={(e) => handleLayerChange(layer.id, 'name', e.target.value)}
+                                    className={`${InputClass} py-2 text-sm ${layer.customCode ? 'text-purple-600' : ''}`}
+                                >
+                                    {LAYER_CATALOG.map(cat => (
+                                        <option key={cat.name} value={cat.name}>
+                                            {cat.name === CUSTOM_LAYER_NAME && layer.customCode ? `${layer.name} (${layer.customCode})` : cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {layer.customCode && <div className="text-[10px] text-purple-500 mt-1 pl-1">Personalizada: {layer.name} ({layer.customCode})</div>}
+                            </div>
+
+                            {/* Module */}
+                            <div className="md:col-span-3">
+                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Módulo Resiliente (psi)</label>
+                                <input 
+                                    type="text" 
+                                    value={layer.mr.toLocaleString('en-US')}
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value.replace(/,/g, '');
+                                        const numValue = parseFloat(rawValue);
+                                        handleLayerChange(layer.id, 'mr', isNaN(numValue) ? 0 : numValue);
+                                    }}
+                                    className={`${InputClass} py-2 text-sm font-mono`}
+                                    readOnly={!!layer.customCode}
+                                    disabled={!!layer.customCode}
+                                />
+                            </div>
+
+                            {/* Coef A */}
+                            <div className="md:col-span-2">
+                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Coef. Estructural (a)</label>
+                                <input 
+                                    type="number" 
+                                    value={layer.a}
+                                    step="0.01"
+                                    onChange={(e) => handleLayerChange(layer.id, 'a', parseFloat(e.target.value))}
+                                    className={`${InputClass} py-2 text-sm text-center font-mono`}
+                                    disabled={!!layer.customCode}
+                                />
+                            </div>
+
+                            {/* Coef M */}
+                            <div className="md:col-span-1">
+                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Drenaje (m)</label>
+                                <input 
+                                    type="number" 
+                                    value={layer.m}
+                                    step="0.01"
+                                    onChange={(e) => handleLayerChange(layer.id, 'm', parseFloat(e.target.value))}
+                                    className={`${InputClass} py-2 text-sm text-center font-mono`}
+                                    disabled={!!layer.customCode}
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex md:col-span-1 justify-center md:justify-end gap-2 mt-2 md:mt-0">
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenCalc(layer)}
+                                    className="flex-1 md:flex-none text-blue-600 hover:text-blue-700 p-2 rounded bg-blue-50 md:bg-transparent md:hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 md:gap-0"
+                                    title="Calcular propiedades"
+                                >
+                                    <i className="fas fa-calculator"></i>
+                                    <span className="md:hidden text-[10px] font-bold uppercase">Calcular</span>
+                                </button>
+                                {formData.layers.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveLayer(layer.id)}
+                                        className="flex-1 md:flex-none text-red-600 hover:text-red-700 p-2 rounded bg-red-50 md:bg-transparent md:hover:bg-red-50 transition-colors flex items-center justify-center gap-2 md:gap-0"
+                                        title="Eliminar capa"
+                                    >
+                                        <i className="fas fa-trash-alt"></i>
+                                        <span className="md:hidden text-[10px] font-bold uppercase">Eliminar</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}

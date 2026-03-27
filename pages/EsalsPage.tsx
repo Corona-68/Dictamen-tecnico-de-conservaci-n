@@ -3,23 +3,38 @@ import { GeneralData, CompositionData, CalculationMethod, AxleInputRow, Pavement
 import { DEFAULT_COMPOSITION, DEFAULT_GENERAL_DATA, TABLE_STATIC_ROWS, VEHICLE_NAMES, LAYER_CATALOG, CUSTOM_LAYER_NAME } from '../constants';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import html2canvas from 'html2canvas';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  Cell,
+  ReferenceLine,
+  LabelList
+} from 'recharts';
 import { calculateUnamTotalAccumulated } from '../utils/calculations';
 
 const DEFAULT_ALT1_LAYERS: PavementLayer[] = [
-    { id: 'alt1_l1', name: "Carpeta asfáltica nueva", mr: 448953, a: 0.44, m: 1.0 },
-    { id: 'alt1_l2', name: "Base asfáltica nueva", mr: 395583, a: 0.303, m: 1.0 },
-    { id: 'alt1_l3', name: "Base asfáltica", mr: 151406, a: 0.24, m: 1.0 },
+    { id: 'alt1_l1', name: "Capa de rodadura", mr: 450000, a: 0.44, m: 1.0 },
+    { id: 'alt1_l2', name: "Base estabilizada", mr: 300000, a: 0.30, m: 1.0 },
+    { id: 'alt1_l3', name: "Carpeta asfáltica (CA)", mr: 400000, a: 0.42, m: 1.0 },
+    { id: 'alt1_l4', name: "Base hidráulica", mr: 30000, a: 0.14, m: 1.0 },
 ];
 
 const DEFAULT_ALT2_LAYERS: PavementLayer[] = [
-    { id: 'alt2_l1', name: "Carpeta asfáltica nueva", mr: 448953, a: 0.44, m: 1.0 },
-    { id: 'alt2_l2', name: "Carpeta asfáltica normal", mr: 275280, a: 0.35, m: 1.0 },
-    { id: 'alt2_l3', name: "Base asfáltica", mr: 151406, a: 0.24, m: 1.0 },
+    { id: 'alt2_l1', name: "Capa de rodadura", mr: 450000, a: 0.44, m: 1.0 },
+    { id: 'alt2_l2', name: "Carpeta asfáltica (CA)", mr: 400000, a: 0.42, m: 1.0 },
+    { id: 'alt2_l3', name: "Base hidráulica", mr: 30000, a: 0.14, m: 1.0 },
 ];
 
 const RIEGO_DE_SELLO_LAYER: PavementLayer = {
     id: 'riego_sello',
-    name: 'Riego de sello',
+    name: 'Capa de rodadura (Sello)',
     a: 0,
     mr: 0,
     m: 1.0
@@ -43,16 +58,15 @@ function getLayerFormulaType(name: string): number {
 function calculateAFromMR(name: string, mr: number): number {
     const type = getLayerFormulaType(name);
     if (mr <= 0) return 0;
+    let a = 0.14;
     if (type === 1) {
-        return Math.max(0.05, Math.min(0.5, 0.40 * Math.log10(mr / 450000) + 0.44));
+        a = Math.max(0.05, Math.min(0.5, 0.40 * Math.log10(mr / 450000) + 0.44));
+    } else if (type === 2) {
+        a = Math.max(0.05, Math.min(0.2, 0.249 * Math.log10(mr) - 0.977));
+    } else if (type === 3) {
+        a = Math.max(0.05, Math.min(0.15, 0.227 * Math.log10(mr) - 0.839));
     }
-    if (type === 2) {
-        return Math.max(0.05, Math.min(0.2, 0.249 * Math.log10(mr) - 0.977));
-    }
-    if (type === 3) {
-        return Math.max(0.05, Math.min(0.15, 0.227 * Math.log10(mr) - 0.839));
-    }
-    return 0.14; // Default
+    return Math.round(a * 100) / 100;
 }
 
 function calculateMRFromA(name: string, a: number): number {
@@ -171,7 +185,7 @@ const StructureTable = ({
                                                 onChange={(e) => onLayerChange?.(layer.id, 'a', e.target.value)}
                                                 className="w-16 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none text-center"
                                             />
-                                        ) : layer.a}
+                                        ) : formatNum(layer.a, 2)}
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         {isEditable ? (
@@ -317,7 +331,7 @@ const StructureTable = ({
                                                 onChange={(e) => onLayerChange?.(layer.id, 'a', e.target.value)}
                                                 className="w-12 text-right border-b border-slate-100"
                                             />
-                                        ) : <span className="text-slate-700">{layer.a}</span>}
+                                        ) : <span className="text-slate-700">{formatNum(layer.a, 2)}</span>}
                                     </div>
                                     <div className="flex justify-between">
                                         <span>m:</span>
@@ -798,7 +812,7 @@ const EsalsPage: React.FC = () => {
               };
           }
 
-          return { ...l, [field]: field === 'mr' || field === 'a' || field === 'm' ? parseFloat(value) || 0 : value };
+          return { ...l, [field]: field === 'a' ? Math.round((parseFloat(value) || 0) * 100) / 100 : (field === 'mr' || field === 'm' ? parseFloat(value) || 0 : value) };
       }));
   };
 
@@ -812,7 +826,7 @@ const EsalsPage: React.FC = () => {
               ...l,
               name: customLayerForm.name || CUSTOM_LAYER_NAME,
               mr: customLayerForm.mr,
-              a: customLayerForm.a,
+              a: Math.round(customLayerForm.a * 100) / 100,
               m: customLayerForm.m,
               customCode: customLayerForm.code.toUpperCase().substring(0, 2)
           };
@@ -826,8 +840,15 @@ const EsalsPage: React.FC = () => {
 
   const formatNum = (n: number | undefined, d: number = 2) => (n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
+  const generatePDF = async () => {
+    // Small delay to ensure charts are rendered and animations (if any) are done
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'letter'
+    });
     const pageWidth = doc.internal.pageSize.getWidth();
     
     // Title
@@ -901,7 +922,7 @@ const EsalsPage: React.FC = () => {
       });
     }
 
-    // 2. Requerimiento de calidad de mezcla asfáltica
+    // 2. Requerimiento de calidad de mezcla asfáltica y Análisis de Tránsito
     const unamResults = calculateUnamTotalAccumulated(genData, compData, 0); // Z=0 as requested
     const totalUnam = unamResults.totalAccumulated;
     const isPerformance = totalUnam > 10000000;
@@ -909,22 +930,58 @@ const EsalsPage: React.FC = () => {
     doc.addPage();
     doc.setFontSize(14);
     doc.setTextColor(51, 65, 85);
-    doc.text("2. Requerimiento de calidad de mezcla asfáltica", 14, 20);
+    doc.text("2. Análisis de Tránsito y Calidad de Mezcla", 14, 20);
     
+    doc.setFontSize(12);
+    doc.text("2.1 Requerimiento de calidad de mezcla asfáltica", 14, 30);
     doc.setFontSize(10);
     doc.setTextColor(30, 41, 59);
     const unamText = `Para uniformizar el criterio y establecer los requisitos de selección del tipo de asfalto, de los materiales pétreos, del nivel de tránsito para diseño de mezclas, se obtiene el número de ejes equivalentes de 8,2 t acumulados durante el periodo de servicio del pavimento en el carril de diseño que en ningún caso será menor de diez (10) años; obtenido con el método de Instituto de Ingeniería de la UNAM para condición de daño superficial (L Z=0). el cual es ${formatNum(totalUnam, 0)}, ${isPerformance ? "por lo que se requiere que se diseñe por el método por desempeño" : "por lo que se requiere que se diseñe por el método Marshall"}.`;
     
-    const splitText = doc.splitTextToSize(unamText, pageWidth - 28);
-    doc.text(splitText, 14, 30);
+    const splitUnamText = doc.splitTextToSize(unamText, pageWidth - 28);
+    doc.text(splitUnamText, 14, 38);
 
-    // 3. Traffic Analysis
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.setTextColor(51, 65, 85);
-    doc.text("3. Análisis de Tránsito (ESALs)", 14, 20);
+    // UNAM Table
+    const unamRows = unamResults.rows
+      .filter(r => r.equiv > 0)
+      .map(r => [
+        r.no,
+        r.tipo,
+        r.estado,
+        formatNum(r.wTon, 1),
+        formatNum(r.ejes, 0),
+        r.damage.toFixed(5),
+        formatNum(r.equiv, 0)
+      ]);
+
     autoTable(doc, {
-      startY: 25,
+      startY: 38 + (splitUnamText.length * 5) + 5,
+      head: [['No.', 'Tipo', 'Estado', 'W (Ton)', 'Ejes 1er Año', 'Daño Unit.', 'Ejes Equiv.']],
+      body: unamRows,
+      theme: 'grid',
+      headStyles: { fillColor: [71, 85, 105] },
+      styles: { fontSize: 8 }
+    });
+
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 2,
+      body: [
+        ['Suma Ejes Equiv. 1er Año', formatNum(unamResults.totalEquiv1stYear, 0)],
+        ['Coef. Acumulación (CT)', unamResults.ct.toFixed(4)],
+        ['Total Ejes Equiv. Acumulados', formatNum(unamResults.totalAccumulated, 0)],
+      ],
+      theme: 'grid',
+      styles: { fontSize: 9, fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 100 } }
+    });
+
+    const unamTableFinalY = (doc as any).lastAutoTable.finalY;
+
+    doc.setFontSize(12);
+    doc.setTextColor(51, 65, 85);
+    doc.text("2.2 Análisis de Tránsito (ESALs)", 14, unamTableFinalY + 10);
+    autoTable(doc, {
+      startY: unamTableFinalY + 15,
       head: [['Concepto', 'Valor']],
       body: [
         ['ESALs Primer Año (W18_1)', formatNum(totalESALs1Year, 0)],
@@ -935,12 +992,42 @@ const EsalsPage: React.FC = () => {
       headStyles: { fillColor: [30, 41, 59] }
     });
 
-    // 4. SN Requirements
+    // 2.3 Descripción o diagnóstico del estado físico del tramo
+    const diagnosisY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(12);
+    doc.setTextColor(51, 65, 85);
+    doc.text("2.3 Descripción o diagnóstico del estado físico del tramo", 14, diagnosisY);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    const diagnosisText = genData.diagnosis || "No se ingresó descripción o diagnóstico.";
+    const splitDiagnosisText = doc.splitTextToSize(diagnosisText, pageWidth - 28);
+    doc.text(splitDiagnosisText, 14, diagnosisY + 8);
+
+    // 2.4 Tipo de asfalto requerido grado PG
+    const asphaltY = diagnosisY + 8 + (splitDiagnosisText.length * 5) + 10;
+    doc.setFontSize(12);
+    doc.setTextColor(51, 65, 85);
+    doc.text("2.4 Tipo de asfalto requerido grado PG", 14, asphaltY);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.text(genData.asphaltGrade || "70H-16", 14, asphaltY + 8);
+
+    // 3. SN Requirements
+    const snReqY = asphaltY + 18;
+    // Check if we need a new page for section 3
+    let currentY = snReqY;
+    if (currentY > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage();
+        currentY = 20;
+    }
+
     doc.setFontSize(14);
     doc.setTextColor(51, 65, 85);
-    doc.text("4. Requerimientos Estructurales (AASHTO-93)", 14, (doc as any).lastAutoTable.finalY + 15);
+    doc.text("3. Requerimientos Estructurales (AASHTO-93)", 14, currentY);
     autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
+      startY: currentY + 5,
       head: [['Parámetro', 'Valor']],
       body: [
         ['Diferencia de Servicialidad (ΔPSI)', formatNum(4.2 - genData.finalServiceability, 1)],
@@ -948,6 +1035,118 @@ const EsalsPage: React.FC = () => {
       ],
       theme: 'plain',
     });
+
+    // 4. Resumen Comparativo de Alternativas
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.setTextColor(51, 65, 85);
+    doc.text("4. Resumen Comparativo de Alternativas", 14, 20);
+    
+    autoTable(doc, {
+        startY: 28,
+        head: [['Alternativa', 'SN Total', 'W18 Soportado', 'Vida (Años)', 'Cumple']],
+        body: [
+            ['Estructura Actual', formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            ['Alternativa 1', formatNum(structureAlt1.snTotalProvided, 2), formatNum(structureAlt1.esalsForSnTotal, 0), formatNum(structureAlt1.remainingLifeYears, 1), structureAlt1.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            ['Alternativa 2', formatNum(structureAlt2.snTotalProvided, 2), formatNum(structureAlt2.esalsForSnTotal, 0), formatNum(structureAlt2.remainingLifeYears, 1), structureAlt2.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+            ['Alternativa 3', formatNum(structureAlt3.snTotalProvided, 2), formatNum(structureAlt3.esalsForSnTotal, 0), formatNum(structureAlt3.remainingLifeYears, 1), structureAlt3.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [51, 65, 85] },
+        columnStyles: {
+            4: { fontStyle: 'bold' }
+        }
+    });
+
+    // Add Charts to PDF
+    const chartSn = document.getElementById('chart-sn');
+    const chartLayers = document.getElementById('chart-layers');
+    
+    currentY = (doc as any).lastAutoTable.finalY + 20;
+
+    if (chartSn) {
+        try {
+            // Add Chart Title
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text("Cuadro Comparativo de Alternativas (SN)", pageWidth / 2, currentY, { align: 'center' });
+            currentY += 12;
+
+            const canvas = await html2canvas(chartSn, { 
+                scale: 1.5, // Slightly lower scale for better compatibility
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true,
+                allowTaint: true,
+                width: chartSn.offsetWidth,
+                height: chartSn.offsetHeight
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = pageWidth - 40;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const xPos = (pageWidth - imgWidth) / 2;
+            
+            if (currentY + imgHeight > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                currentY = 20;
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text("Cuadro Comparativo de Alternativas (SN) - Cont.", pageWidth / 2, currentY, { align: 'center' });
+                currentY += 12;
+            }
+            
+            doc.addImage(imgData, 'PNG', xPos, currentY, imgWidth, imgHeight);
+            currentY += imgHeight + 25;
+        } catch (err) {
+            console.error("Error capturing SN chart:", err);
+            doc.setFontSize(10);
+            doc.setTextColor(255, 0, 0);
+            doc.text("[Error al generar gráfica SN]", 14, currentY);
+            currentY += 10;
+        }
+    }
+
+    if (chartLayers) {
+        try {
+            // Add Chart Title
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text("Alternativas Estructurales de Pavimento", pageWidth / 2, currentY, { align: 'center' });
+            currentY += 12;
+
+            const canvas = await html2canvas(chartLayers, { 
+                scale: 1.5, // Slightly lower scale for better compatibility
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true,
+                allowTaint: true,
+                width: chartLayers.offsetWidth,
+                height: chartLayers.offsetHeight
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = pageWidth - 40;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const xPos = (pageWidth - imgWidth) / 2;
+            
+            if (currentY + imgHeight > doc.internal.pageSize.getHeight() - 20) {
+                doc.addPage();
+                currentY = 20;
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text("Alternativas Estructurales de Pavimento - Cont.", pageWidth / 2, currentY, { align: 'center' });
+                currentY += 12;
+            }
+            
+            doc.addImage(imgData, 'PNG', xPos, currentY, imgWidth, imgHeight);
+        } catch (err) {
+            console.error("Error capturing layers chart:", err);
+            doc.setFontSize(10);
+            doc.setTextColor(255, 0, 0);
+            doc.text("[Error al generar gráfica de capas]", 14, currentY);
+        }
+    }
 
     // 5. Structure Alternatives
     const addStructureToPdf = (title: string, data: any, index: number) => {
@@ -961,7 +1160,7 @@ const EsalsPage: React.FC = () => {
             body: [
                 ...data.layers.map((l: any) => [
                     l.name,
-                    l.a,
+                    formatNum(l.a, 2),
                     l.m,
                     formatNum(l.mr, 0),
                     formatNum(l.h_cm_real, 1),
@@ -987,7 +1186,10 @@ const EsalsPage: React.FC = () => {
     addStructureToPdf("Alternativa 2: Fresado + CA", structureAlt2, 3);
     addStructureToPdf("Alternativa 3: Riego de sello", structureAlt3, 4);
 
-    doc.save("Dictamenes_Tecnicos_Conservacion_Periodica_2026.pdf");
+    const fileName = genData.projectName 
+        ? `${genData.projectName.replace(/[/\\?%*:|"<>]/g, '-')}.pdf` 
+        : "Memoria_Diseño_Pavimento.pdf";
+    doc.save(fileName);
   };
 
   return (
@@ -1062,6 +1264,292 @@ const EsalsPage: React.FC = () => {
                 <div className="text-[10px] text-slate-400 mt-2 text-center">
                     Semilla actual: {formatNum(snSeed)}
                 </div>
+          </div>
+      </div>
+
+      {/* Comparative Chart Section */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 mb-12 shadow-sm overflow-hidden">
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <i className="fas fa-chart-bar text-blue-600"></i> Cuadro Comparativo de Alternativas
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Chart */}
+              <div id="chart-sn" className="h-[300px] sm:h-[350px] w-full bg-white p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                          data={[
+                              { name: 'Actual', sn: structureActual.snTotalProvided, color: '#94a3b8' },
+                              { name: 'REC+CA', sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
+                              { name: 'Fresado+CA', sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
+                              { name: 'Riego sello', sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
+                          ]}
+                          margin={{ top: 30, right: 50, left: 20, bottom: 60 }}
+                      >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis 
+                              dataKey="name" 
+                              axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
+                              tickLine={{ stroke: '#000' }} 
+                              tick={{ fill: '#000', fontSize: 14, fontWeight: '600' }}
+                              interval={0}
+                              padding={{ left: 10, right: 10 }}
+                              dy={12}
+                              label={{ value: 'Alternativas', position: 'insideBottom', offset: -35, style: { fill: '#000', fontSize: 14, fontWeight: 'bold' } }}
+                          />
+                          <YAxis 
+                              axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
+                              tickLine={{ stroke: '#000' }} 
+                              tick={{ fill: '#000', fontSize: 12 }}
+                              width={50}
+                              label={{ value: 'SN Total', angle: -90, position: 'insideLeft', style: { fill: '#000', fontSize: 12, textAnchor: 'middle', fontWeight: 'bold' } }}
+                          />
+                          <Tooltip 
+                              cursor={{ fill: '#f8fafc' }}
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          />
+                          <ReferenceLine 
+                              y={snRequiredTotalManual} 
+                              stroke="#ef4444" 
+                              strokeDasharray="5 5" 
+                              label={{ position: 'top', value: `Req: ${formatNum(snRequiredTotalManual, 2)}`, fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} 
+                          />
+                          <Bar dataKey="sn" radius={[4, 4, 0, 0]} barSize={45} isAnimationActive={false}>
+                              {
+                                [
+                                    { name: 'Actual', sn: structureActual.snTotalProvided, color: '#94a3b8' },
+                                    { name: 'REC+CA', sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
+                                    { name: 'Fresado+CA', sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
+                                    { name: 'Riego sello', sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
+                                ].map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={1} />
+                                ))
+                              }
+                          </Bar>
+                      </BarChart>
+                  </ResponsiveContainer>
+              </div>
+
+              {/* Summary Table */}
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                      <table className="min-w-full text-sm text-left">
+                          <thead className="text-[10px] sm:text-xs text-slate-400 uppercase bg-slate-50">
+                              <tr>
+                                  <th className="px-4 py-3">Alternativa</th>
+                                  <th className="px-4 py-3 text-right">SN Total</th>
+                                  <th className="px-4 py-3 text-right">W18 Soportado</th>
+                                  <th className="px-4 py-3 text-right">Vida (Años)</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                              {[
+                                  { name: 'Estructura Actual', data: structureActual, color: 'bg-slate-400' },
+                                  { name: 'Alternativa 1', data: structureAlt1, color: 'bg-sky-500' },
+                                  { name: 'Alternativa 2', data: structureAlt2, color: 'bg-violet-500' },
+                                  { name: 'Alternativa 3', data: structureAlt3, color: 'bg-amber-500' },
+                              ].map((alt, idx) => (
+                                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-4 py-3 font-medium text-slate-700 flex items-center gap-2">
+                                          <span className={`w-2 h-2 rounded-full shrink-0 ${alt.color}`}></span>
+                                          <span className="truncate">{alt.name}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                          {formatNum(alt.data.snTotalProvided, 2)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-slate-600">
+                                          {formatNum(alt.data.esalsForSnTotal, 0)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
+                                          {formatNum(alt.data.remainingLifeYears, 1)}
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-700 leading-relaxed">
+                      <i className="fas fa-info-circle mr-1"></i>
+                      El <strong>SN Requerido</strong> para el diseño es de <strong>{formatNum(snRequiredTotalManual, 2)}</strong>. 
+                      Las alternativas que superen este valor cumplen con la vida de diseño proyectada ({genData.designPeriod} años).
+                  </div>
+              </div>
+          </div>
+
+      {/* Structural Comparison Chart (Stacked Layers) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 mb-12 shadow-sm overflow-hidden">
+          <h3 className="text-xl sm:text-2xl font-bold text-slate-700 mb-8 text-center">
+              Alternativas estructurales de pavimento
+          </h3>
+          
+          <div id="chart-layers" className="h-[450px] w-full bg-white p-4">
+              <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                      data={(() => {
+                          const structures = [
+                              { name: 'Actual', data: structureActual, borderColor: '#000' },
+                              { name: 'REC+CA', data: structureAlt1, borderColor: '#000' },
+                              { name: 'Fresado+CA', data: structureAlt2, borderColor: '#000' },
+                              { name: 'Riego sello', data: structureAlt3, borderColor: '#000' },
+                          ];
+
+                          const getLayerColor = (name: string) => {
+                              const n = name.toLowerCase();
+                              if (n.includes('subrasante')) return '#f0b084';
+                              if (n.includes('base hidráulica') || n.includes('base hidraulica')) return '#8da9d4';
+                              if (n.includes('recuperación') || n.includes('recuperacion') || n.includes('base estabilizada') || n.includes('base asfáltica') || n.includes('base asfaltica')) return '#a349a4';
+                              if (n.includes('base emulsión') || n.includes('base emulsion')) return '#3d3d3d';
+                              if (n.includes('carpeta') || n.includes('asfáltica') || n.includes('asfaltica')) return '#3d3d3d';
+                              if (n.includes('rodadura') || n.includes('sello')) return '#7d3c11';
+                              return '#cbd5e1';
+                          };
+
+                          return structures.map(s => {
+                              const obj: any = { name: s.name, borderColor: s.borderColor };
+                              let vizLayers: { name: string; h: number; color: string }[] = [];
+                              
+                              const layers = s.data.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reverse();
+                              
+                              layers.forEach((l, idx) => {
+                                  let h = l.h_cm_real;
+                                  if (s.name === 'Riego de sello' && (l.name.toLowerCase().includes('rodadura') || l.name.toLowerCase().includes('sello'))) {
+                                      h = 2;
+                                  }
+                                  
+                                  let color = getLayerColor(l.name);
+                                  if (s.name !== 'Actual' && idx === layers.length - 1) {
+                                      color = '#7d3c11';
+                                  }
+                                  
+                                  vizLayers.push({ name: l.name, h: h, color: color });
+                              });
+
+                              vizLayers.forEach((l, i) => {
+                                  obj[`l${i}`] = l.h;
+                                  obj[`l${i}Name`] = l.name;
+                                  obj[`l${i}Color`] = l.color;
+                              });
+                              return obj;
+                          });
+                      })()}
+                      margin={{ top: 40, right: 30, left: 10, bottom: 60 }}
+                      barCategoryGap="35%"
+                  >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                          dataKey="name" 
+                          axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
+                          tickLine={{ stroke: '#000' }} 
+                          tick={{ fill: '#000', fontSize: 16, fontWeight: '500' }}
+                          interval={0}
+                          dy={12}
+                      />
+                      <YAxis 
+                          axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
+                          tickLine={{ stroke: '#000' }} 
+                          tick={{ fill: '#000', fontSize: 14 }}
+                          width={45}
+                          domain={[0, 40]}
+                          ticks={[0, 5, 10, 15, 20, 25, 30, 35, 40]}
+                           label={{ value: 'Espesor (cm)', angle: -90, position: 'insideLeft', style: { fill: '#000', fontSize: 12, textAnchor: 'middle', fontWeight: 'bold' } }}
+                      />
+                      <Tooltip 
+                          cursor={{ fill: '#f8fafc', opacity: 0.4 }}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                          formatter={(value: any, name: string, props: any) => {
+                              if (!props || !props.payload) return [`${value} cm`, name];
+                              const layerName = props.payload[`${props.dataKey}Name`] || name;
+                              return [`${value} cm`, layerName];
+                          }}
+                      />
+
+                      <ReferenceLine 
+                          y={structureActual.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reduce((acc, l) => acc + (l.h_cm_real || 0), 0)} 
+                          stroke="#64748b" 
+                          strokeDasharray="5 5" 
+                          strokeWidth={1.5}
+                          label={{ 
+                              value: 'Rasante actual', 
+                              position: 'top', 
+                              fill: '#000', 
+                              fontSize: 12, 
+                              fontWeight: 'bold',
+                              offset: 15
+                          }} 
+                      />
+                      
+                      {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                          <Bar 
+                              key={i} 
+                              dataKey={`l${i}`} 
+                              stackId="a" 
+                              isAnimationActive={false}
+                          >
+                              {(() => {
+                                  const structures = [
+                                      { name: 'Actual', data: structureActual, borderColor: '#000' },
+                                      { name: 'REC+CA', data: structureAlt1, borderColor: '#000' },
+                                      { name: 'Fresado+CA', data: structureAlt2, borderColor: '#000' },
+                                      { name: 'Riego sello', data: structureAlt3, borderColor: '#000' },
+                                  ];
+                                  
+                                  const getLayerColor = (name: string) => {
+                                      const n = name.toLowerCase();
+                                      if (n.includes('subrasante')) return '#f0b084';
+                                      if (n.includes('base hidráulica') || n.includes('base hidraulica')) return '#8da9d4';
+                                      if (n.includes('recuperación') || n.includes('recuperacion') || n.includes('base estabilizada') || n.includes('base asfáltica') || n.includes('base asfaltica')) return '#a349a4';
+                                      if (n.includes('base emulsión') || n.includes('base emulsion')) return '#3d3d3d';
+                                      if (n.includes('carpeta') || n.includes('asfáltica') || n.includes('asfaltica')) return '#3d3d3d';
+                                      if (n.includes('rodadura') || n.includes('sello')) return '#7d3c11';
+                                      return '#cbd5e1';
+                                  };
+
+                                  return structures.map((s, idx) => {
+                                      let vizLayers: { name: string; color: string }[] = [];
+                                      const layers = s.data.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reverse();
+                                      layers.forEach((l, lIdx) => {
+                                          let color = getLayerColor(l.name);
+                                          if (s.name !== 'Actual' && lIdx === layers.length - 1) {
+                                              color = '#7d3c11';
+                                          }
+                                          vizLayers.push({ name: l.name, color: color });
+                                      });
+                                      
+                                      const color = vizLayers[i]?.color || '#cbd5e1';
+                                      // Apply border color from alternative
+                                      return <Cell key={idx} fill={color} stroke="#000" strokeWidth={1} />;
+                                  });
+                              })()}
+                          </Bar>
+                      ))}
+                      
+                      <Legend 
+                          verticalAlign="bottom" 
+                          height={40}
+                          content={() => (
+                              <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 mt-6">
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 border border-black bg-[#8da9d4]"></div>
+                                      <span className="text-sm text-slate-700">Base hidráulica</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 border border-black bg-[#a349a4]"></div>
+                                      <span className="text-sm text-slate-700">Base estabilizada</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 border border-black bg-[#3d3d3d]"></div>
+                                      <span className="text-sm text-slate-700">Carpeta CA</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-4 h-4 border border-black bg-[#7d3c11]"></div>
+                                      <span className="text-sm text-slate-700">Capa de rodadura</span>
+                                  </div>
+                              </div>
+                          )}
+                      />
+                  </BarChart>
+              </ResponsiveContainer>
           </div>
       </div>
 
@@ -1285,7 +1773,7 @@ const EsalsPage: React.FC = () => {
                                   type="number" 
                                   step="0.001"
                                   value={calcLayerData.a}
-                                  onChange={(e) => setCalcLayerData(prev => prev ? ({ ...prev, a: parseFloat(e.target.value) || 0 }) : null)}
+                                  onChange={(e) => setCalcLayerData(prev => prev ? ({ ...prev, a: Math.round((parseFloat(e.target.value) || 0) * 100) / 100 }) : null)}
                                   className="w-full bg-white border border-slate-300 rounded px-3 py-2 focus:border-blue-500 outline-none"
                               />
                               <button 

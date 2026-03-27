@@ -174,37 +174,68 @@ const EsalCalculationPage: React.FC = () => {
                             <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Desglose de Ejes Equivalentes</h4>
                             <div className="text-[10px] text-slate-400">Pt = {genData.finalServiceability}</div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                                <thead className="text-slate-500 uppercase font-bold border-b border-slate-200 bg-slate-50">
-                                    <tr>
-                                        <th className="py-3 px-4">No.</th>
-                                        <th className="py-3 px-4">Tipo</th>
-                                        <th className="py-3 px-4">Estado</th>
-                                        <th className="py-3 px-4 text-right">W(Kip´s)</th>
-                                        <th className="py-3 px-4 text-right">Fx</th>
-                                        <th className="py-3 px-4 text-right text-orange-600">Esal´s 1er. año</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {esalRows.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-2 px-4 text-slate-400">{row.no}</td>
-                                            <td className="py-2 px-4 text-slate-900 font-medium">{row.tipo}</td>
-                                            <td className="py-2 px-4 text-slate-500">{row.estado}</td>
-                                            <td className="py-2 px-4 text-right font-mono text-blue-600">{formatNum(row.lxKip, 1)}</td>
-                                            <td className="py-2 px-4 text-right font-mono text-emerald-600">{formatNum(row.fx, 4)}</td>
-                                            <td className="py-2 px-4 text-right font-mono text-orange-600">{formatNum(row.esalAnio, 0)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot className="border-t border-slate-200 font-bold bg-slate-50">
-                                    <tr>
-                                        <td colSpan={5} className="py-4 px-4 text-right text-slate-500">Total ESAL's 1er Año:</td>
-                                        <td className="py-4 px-4 text-right text-orange-600 font-mono text-xl">{formatNum(totalESALs1Year, 0)}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        
+                        <div className="p-4">
+                            {/* Header - Desktop Only */}
+                            <div className="hidden md:grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-4 mb-2">
+                                <div className="col-span-1">No.</div>
+                                <div className="col-span-3">Tipo</div>
+                                <div className="col-span-2">Estado</div>
+                                <div className="col-span-2 text-right">W(Kip´s)</div>
+                                <div className="col-span-2 text-right">Fx</div>
+                                <div className="col-span-2 text-right text-orange-600">Esal´s 1er. año</div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {esalRows.map((row, idx) => (
+                                    <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm md:border-none md:p-0 md:shadow-none">
+                                        {/* Mobile Header */}
+                                        <div className="flex justify-between items-center md:hidden mb-4 border-b border-slate-100 pb-2">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Eje #{row.no}</span>
+                                            <span className="text-sm font-bold text-slate-900">{row.tipo}</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-2 items-center">
+                                            {/* No - Desktop Only */}
+                                            <div className="hidden md:block col-span-1 text-slate-400">{row.no}</div>
+                                            
+                                            {/* Tipo - Desktop Only */}
+                                            <div className="hidden md:block col-span-3 text-slate-900 font-medium">{row.tipo}</div>
+
+                                            {/* Estado */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Estado</label>
+                                                <div className="text-sm text-slate-500">{row.estado}</div>
+                                            </div>
+
+                                            {/* W(Kip´s) */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">W(Kip´s)</label>
+                                                <div className="text-sm font-mono text-right text-blue-600">{formatNum(row.lxKip, 1)}</div>
+                                            </div>
+
+                                            {/* Fx */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">Fx</label>
+                                                <div className="text-sm font-mono text-right text-emerald-600">{formatNum(row.fx, 4)}</div>
+                                            </div>
+
+                                            {/* Esal´s 1er. año */}
+                                            <div className="md:col-span-2">
+                                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right text-orange-600">Esal´s 1er. año</label>
+                                                <div className="text-sm font-mono text-right text-orange-600 font-bold">{formatNum(row.esalAnio, 0)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 pt-4 border-t border-slate-200 flex justify-between items-center px-4">
+                                <span className="text-sm font-bold text-slate-500 uppercase">Total ESAL's 1er Año:</span>
+                                <span className="text-xl font-black text-orange-600 font-mono">
+                                    {formatNum(totalESALs1Year, 0)}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

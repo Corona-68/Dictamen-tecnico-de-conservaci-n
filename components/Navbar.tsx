@@ -24,42 +24,44 @@ const Navbar: React.FC = () => {
             <span>Ingeniería en Vías Terrestres</span>
           </div>
 
-          {/* Menú de navegación full width en móvil */}
-          <div className="flex items-center justify-between w-full md:w-auto gap-1 md:gap-2">
-            <NavLink to="/" className={getLinkClass}>
-              <i className="fas fa-home text-sm md:text-lg"></i> 
-              <span>Inicio</span>
-            </NavLink>
-            <NavLink to="/datos" className={getLinkClass}>
-              <i className="fas fa-file-invoice text-sm md:text-lg"></i> 
-              <span className="whitespace-nowrap">Datos</span>
-            </NavLink>
-            <NavLink to="/composicion" className={getLinkClass}>
-              <i className="fas fa-calculator text-sm md:text-lg"></i> 
-              <span className="whitespace-nowrap">Comp. Ejes</span>
-            </NavLink>
-            <NavLink to="/esals" className={getLinkClass}>
-              <i className="fas fa-layer-group text-sm md:text-lg"></i> 
-              <span>Estructuración</span>
-            </NavLink>
-            <NavLink to="/calculo-esals" className={getLinkClass}>
-              <i className="fas fa-truck-moving text-sm md:text-lg"></i> 
-              <span>ESAL's</span>
-            </NavLink>
-            <NavLink to="/unam" className={getLinkClass}>
-              <i className="fas fa-university text-sm md:text-lg"></i> 
-              <span>UNAM</span>
-            </NavLink>
-            
-            {/* Botón de Imprimir */}
-            <button 
-              onClick={handlePrint}
-              className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-md transition-colors duration-200 text-xs md:text-base flex-1 md:flex-none text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-              title="Imprimir pantalla"
-            >
-              <i className="fas fa-print text-sm md:text-lg"></i>
-              <span className="hidden sm:inline">Imprimir</span>
-            </button>
+          {/* Menú de navegación con scroll horizontal en móvil */}
+          <div className="flex items-center overflow-x-auto no-scrollbar w-full md:w-auto gap-1 md:gap-2 py-2 md:py-0">
+            <div className="flex items-center gap-1 md:gap-2 min-w-max md:min-w-0">
+              <NavLink to="/" className={getLinkClass}>
+                <i className="fas fa-home text-sm md:text-lg"></i> 
+                <span>Inicio</span>
+              </NavLink>
+              <NavLink to="/datos" className={getLinkClass}>
+                <i className="fas fa-file-invoice text-sm md:text-lg"></i> 
+                <span className="whitespace-nowrap">Datos</span>
+              </NavLink>
+              <NavLink to="/composicion" className={getLinkClass}>
+                <i className="fas fa-calculator text-sm md:text-lg"></i> 
+                <span className="whitespace-nowrap">Comp. Ejes</span>
+              </NavLink>
+              <NavLink to="/esals" className={getLinkClass}>
+                <i className="fas fa-layer-group text-sm md:text-lg"></i> 
+                <span>Estructuración</span>
+              </NavLink>
+              <NavLink to="/calculo-esals" className={getLinkClass}>
+                <i className="fas fa-truck-moving text-sm md:text-lg"></i> 
+                <span>ESAL's</span>
+              </NavLink>
+              <NavLink to="/unam" className={getLinkClass}>
+                <i className="fas fa-university text-sm md:text-lg"></i> 
+                <span>UNAM</span>
+              </NavLink>
+              
+              {/* Botón de Imprimir */}
+              <button 
+                onClick={handlePrint}
+                className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-3 md:px-4 py-2 rounded-md transition-colors duration-200 text-xs md:text-base text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 whitespace-nowrap"
+                title="Imprimir pantalla"
+              >
+                <i className="fas fa-print text-sm md:text-lg"></i>
+                <span className="hidden sm:inline">Imprimir</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

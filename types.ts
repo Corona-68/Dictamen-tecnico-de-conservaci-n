@@ -22,6 +22,8 @@ export interface GeneralData {
   designPeriod: number;        // n (years)
   growthRate: number;          // r (%)
   snSeed: number;              // SN (Structural Number)
+  diagnosis?: string;          // NEW: Physical diagnosis of the road section
+  asphaltGrade?: string;        // NEW: Required asphalt grade PG
   
   // New Pavement Structure Fields
   rigidityLevel: 'low' | 'medium' | 'high';

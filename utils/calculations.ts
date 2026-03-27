@@ -178,8 +178,9 @@ export function calculateUnamDamage(P: number, type: string, index: number, Z: n
 export function calculateUnamTotalAccumulated(genData: GeneralData, compData: number[], zDepth: number = 0) {
     const ejesResults = calculateEjesResults(genData, compData);
     let sum = 0;
-    TABLE_STATIC_ROWS.forEach((staticRow, index) => {
+    const rows = TABLE_STATIC_ROWS.map((staticRow, index) => {
         const rowTipo = staticRow[1] as string;
+        const rowEstado = staticRow[2] as string;
         let wTon = 0;
         switch (genData.roadType) {
             case 'ET_A': wTon = staticRow[4] as number; break;
@@ -189,7 +190,18 @@ export function calculateUnamTotalAccumulated(genData: GeneralData, compData: nu
             default: wTon = staticRow[4] as number;
         }
         const damage = calculateUnamDamage(wTon, rowTipo, index, zDepth);
-        sum += (ejesResults[index] || 0) * damage;
+        const ejes = ejesResults[index] || 0;
+        const equiv = ejes * damage;
+        sum += equiv;
+        return {
+            no: staticRow[0],
+            tipo: rowTipo,
+            estado: rowEstado,
+            wTon,
+            ejes,
+            damage,
+            equiv
+        };
     });
 
     const r = genData.growthRate / 100;
@@ -198,5 +210,5 @@ export function calculateUnamTotalAccumulated(genData: GeneralData, compData: nu
     if (r > 0) {
         ct = (Math.pow(1 + r, n) - 1) / r;
     }
-    return { totalEquiv1stYear: sum, ct, totalAccumulated: sum * ct };
+    return { totalEquiv1stYear: sum, ct, totalAccumulated: sum * ct, rows };
 }
