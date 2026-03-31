@@ -5,7 +5,7 @@ import { GeneralData, PavementLayer } from '../types';
 import { DEFAULT_GENERAL_DATA, LAYER_CATALOG, CUSTOM_LAYER_NAME, DEFAULT_COMPOSITION } from '../constants';
 import { calculateEjesResults, calculateEsalRows } from '../utils/calculations';
 import { useFirebase } from '../components/FirebaseProvider';
-import { db, setDoc, doc, Timestamp, handleFirestoreError, OperationType, deleteDoc } from '../firebase';
+import { db, setDoc, doc, Timestamp, handleFirestoreError, OperationType, deleteDoc, getDoc } from '../firebase';
 
 const GeneralDataPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +13,16 @@ const GeneralDataPage: React.FC = () => {
   const [formData, setFormData] = useState<GeneralData>(DEFAULT_GENERAL_DATA);
   const [isSaved, setIsSaved] = useState(false);
   const [isCloudSaving, setIsCloudSaving] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(localStorage.getItem('currentProjectId'));
   const [showProjectList, setShowProjectList] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setCurrentProjectId(null);
+      localStorage.removeItem('currentProjectId');
+    }
+  }, [user]);
 
   // -- Custom Layer Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -527,46 +536,65 @@ const GeneralDataPage: React.FC = () => {
     if (!user) {
       const success = await login();
       if (!success) return;
-      // Note: user state might not be updated yet, but we can't easily wait for it here
-      // without a more complex state management or checking auth.currentUser directly
-      alert("Inicie sesión para guardar en la nube.");
+      setCloudMessage({ type: 'error', text: "Inicie sesión para guardar en la nube." });
       return;
     }
 
     if (!formData.projectName) {
-      alert("Por favor asigne un nombre al proyecto antes de guardar.");
+      setCloudMessage({ type: 'error', text: "Por favor asigne un nombre al proyecto antes de guardar." });
       return;
     }
 
     setIsCloudSaving(true);
+    setCloudMessage(null);
     try {
-      // Sanitize project name to remove slashes and other characters that break Firestore paths
-      const sanitizedName = formData.projectName
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Remove accents
-        .replace(/[^a-z0-9]/g, '-')      // Replace everything non-alphanumeric with hyphens
-        .replace(/-+/g, '-')             // Collapse multiple hyphens
-        .replace(/^-|-$/g, '');          // Trim hyphens from ends
+      // Use currentProjectId if available, otherwise generate a unique one
+      let projectId = currentProjectId;
+      
+      if (!projectId) {
+        const sanitizedName = formData.projectName
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Remove accents
+          .replace(/[^a-z0-9]/g, '-')      // Replace everything non-alphanumeric with hyphens
+          .replace(/-+/g, '-')             // Collapse multiple hyphens
+          .replace(/^-|-$/g, '');          // Trim hyphens from ends
 
-      const projectId = `${sanitizedName}-${user.uid.substring(0, 5)}`;
+        // Use a combination of sanitized name and a short random string for uniqueness
+        const randomStr = Math.random().toString(36).substring(2, 6);
+        projectId = `${sanitizedName}-${randomStr}-${user.uid.substring(0, 4)}`;
+      }
+
       const projectDoc = doc(db, 'projects', projectId);
+      
+      // Check if it exists to preserve createdAt
+      const existingDoc = await getDoc(projectDoc);
+      const now = Timestamp.now();
       
       const projectData = {
         id: projectId,
         userId: user.uid,
         projectName: formData.projectName,
         section: formData.section || '',
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: existingDoc.exists() ? existingDoc.data()?.createdAt : now,
+        updatedAt: now,
         generalData: formData,
         compositionData: compData
       };
 
       await setDoc(projectDoc, projectData);
-      alert("Proyecto guardado en la nube con éxito.");
+      setCurrentProjectId(projectId);
+      localStorage.setItem('currentProjectId', projectId);
+      setCloudMessage({ type: 'success', text: "Proyecto guardado con éxito." });
+      setTimeout(() => setCloudMessage(null), 3000);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'projects');
+      console.error("Cloud save error:", error);
+      setCloudMessage({ type: 'error', text: "Error al guardar. Verifique su conexión." });
+      try {
+        handleFirestoreError(error, OperationType.WRITE, 'projects');
+      } catch (e) {
+        console.error("Firestore error details:", e);
+      }
     } finally {
       setIsCloudSaving(false);
     }
@@ -578,9 +606,12 @@ const GeneralDataPage: React.FC = () => {
       setCompData(project.compositionData);
       localStorage.setItem('compVehData', JSON.stringify(project.compositionData));
     }
+    setCurrentProjectId(project.id);
+    localStorage.setItem('currentProjectId', project.id);
     localStorage.setItem('datosGeneralesData', JSON.stringify(project.generalData));
     setShowProjectList(false);
-    alert(`Proyecto "${project.projectName}" cargado.`);
+    setCloudMessage({ type: 'success', text: `Proyecto "${project.projectName}" cargado.` });
+    setTimeout(() => setCloudMessage(null), 3000);
   };
 
   const handleDeleteProject = async (projectId: string) => {
@@ -631,7 +662,7 @@ const GeneralDataPage: React.FC = () => {
             type="button"
             onClick={handleCloudSave}
             disabled={isCloudSaving}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-md ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-md relative ${
               isCloudSaving 
                 ? 'bg-slate-400 cursor-not-allowed text-white' 
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -639,6 +670,14 @@ const GeneralDataPage: React.FC = () => {
           >
             <i className={`fas ${isCloudSaving ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
             <span>{isCloudSaving ? 'Guardando...' : 'Guardar en Nube'}</span>
+            
+            {cloudMessage && (
+              <div className={`absolute top-full right-0 mt-2 p-2 rounded shadow-lg text-xs whitespace-nowrap z-50 animate-in fade-in slide-in-from-top-2 duration-300 ${
+                cloudMessage.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+              }`}>
+                {cloudMessage.text}
+              </div>
+            )}
           </button>
         </div>
       </header>

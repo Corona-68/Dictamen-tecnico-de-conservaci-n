@@ -59,7 +59,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    const q = query(collection(db, 'projects'), where('userId', '==', user.uid));
+    // If user is admin (incimoc@gmail.com), show all projects. 
+    // Otherwise only show their own projects.
+    const q = (user.email === 'incimoc@gmail.com')
+      ? query(collection(db, 'projects'))
+      : query(collection(db, 'projects'), where('userId', '==', user.uid));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const projectsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(projectsData);
