@@ -4,11 +4,16 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { GeneralData, PavementLayer } from '../types';
 import { DEFAULT_GENERAL_DATA, LAYER_CATALOG, CUSTOM_LAYER_NAME, DEFAULT_COMPOSITION } from '../constants';
 import { calculateEjesResults, calculateEsalRows } from '../utils/calculations';
+import { useFirebase } from '../components/FirebaseProvider';
+import { db, setDoc, doc, Timestamp, handleFirestoreError, OperationType, deleteDoc } from '../firebase';
 
 const GeneralDataPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, projects, login } = useFirebase();
   const [formData, setFormData] = useState<GeneralData>(DEFAULT_GENERAL_DATA);
   const [isSaved, setIsSaved] = useState(false);
+  const [isCloudSaving, setIsCloudSaving] = useState(false);
+  const [showProjectList, setShowProjectList] = useState(false);
 
   // -- Custom Layer Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -115,7 +120,7 @@ const GeneralDataPage: React.FC = () => {
     }
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -518,6 +523,75 @@ const GeneralDataPage: React.FC = () => {
       }
   };
 
+  const handleCloudSave = async () => {
+    if (!user) {
+      const success = await login();
+      if (!success) return;
+      // Note: user state might not be updated yet, but we can't easily wait for it here
+      // without a more complex state management or checking auth.currentUser directly
+      alert("Inicie sesión para guardar en la nube.");
+      return;
+    }
+
+    if (!formData.projectName) {
+      alert("Por favor asigne un nombre al proyecto antes de guardar.");
+      return;
+    }
+
+    setIsCloudSaving(true);
+    try {
+      // Sanitize project name to remove slashes and other characters that break Firestore paths
+      const sanitizedName = formData.projectName
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/[^a-z0-9]/g, '-')      // Replace everything non-alphanumeric with hyphens
+        .replace(/-+/g, '-')             // Collapse multiple hyphens
+        .replace(/^-|-$/g, '');          // Trim hyphens from ends
+
+      const projectId = `${sanitizedName}-${user.uid.substring(0, 5)}`;
+      const projectDoc = doc(db, 'projects', projectId);
+      
+      const projectData = {
+        id: projectId,
+        userId: user.uid,
+        projectName: formData.projectName,
+        section: formData.section || '',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        generalData: formData,
+        compositionData: compData
+      };
+
+      await setDoc(projectDoc, projectData);
+      alert("Proyecto guardado en la nube con éxito.");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'projects');
+    } finally {
+      setIsCloudSaving(false);
+    }
+  };
+
+  const handleLoadProject = (project: any) => {
+    setFormData(project.generalData);
+    if (project.compositionData) {
+      setCompData(project.compositionData);
+      localStorage.setItem('compVehData', JSON.stringify(project.compositionData));
+    }
+    localStorage.setItem('datosGeneralesData', JSON.stringify(project.generalData));
+    setShowProjectList(false);
+    alert(`Proyecto "${project.projectName}" cargado.`);
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (!window.confirm("¿Está seguro de eliminar este proyecto de la nube?")) return;
+    try {
+      await deleteDoc(doc(db, 'projects', projectId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `projects/${projectId}`);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('datosGeneralesData', JSON.stringify(formData));
@@ -539,10 +613,87 @@ const GeneralDataPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Datos Generales</h1>
-        <p className="text-slate-600">Parámetros fundamentales para el cálculo de ejes y diseño AASHTO.</p>
+      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Datos Generales</h1>
+          <p className="text-slate-600">Parámetros fundamentales para el cálculo de ejes y diseño AASHTO.</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowProjectList(!showProjectList)}
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg border border-slate-300 transition-all"
+          >
+            <i className="fas fa-folder-open"></i>
+            <span>Mis Proyectos</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleCloudSave}
+            disabled={isCloudSaving}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-md ${
+              isCloudSaving 
+                ? 'bg-slate-400 cursor-not-allowed text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            <i className={`fas ${isCloudSaving ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
+            <span>{isCloudSaving ? 'Guardando...' : 'Guardar en Nube'}</span>
+          </button>
+        </div>
       </header>
+
+      {/* Project List Modal/Overlay */}
+      {showProjectList && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-900">Mis Proyectos en la Nube</h3>
+              <button onClick={() => setShowProjectList(false)} className="text-slate-400 hover:text-slate-600">
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto p-6">
+              {!user ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-user-lock text-4xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-600 mb-4">Inicie sesión para ver sus proyectos guardados.</p>
+                  <button onClick={login} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">Entrar con Google</button>
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-folder-open text-4xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-600">No tienes proyectos guardados aún.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {projects.map(project => (
+                    <div key={project.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                      <div className="cursor-pointer flex-grow" onClick={() => handleLoadProject(project)}>
+                        <h4 className="font-bold text-slate-900">{project.projectName}</h4>
+                        <p className="text-sm text-slate-500">{project.section || 'Sin tramo especificado'}</p>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Actualizado: {project.updatedAt?.toDate ? project.updatedAt.toDate().toLocaleString() : 'Reciente'}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                        title="Eliminar proyecto"
+                      >
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+              <button onClick={() => setShowProjectList(false)} className="text-slate-500 font-medium hover:text-slate-700">Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         

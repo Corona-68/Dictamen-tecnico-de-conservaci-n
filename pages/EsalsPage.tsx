@@ -19,18 +19,9 @@ import {
 } from 'recharts';
 import { calculateUnamTotalAccumulated } from '../utils/calculations';
 
-const DEFAULT_ALT1_LAYERS: PavementLayer[] = [
-    { id: 'alt1_l1', name: "Capa de rodadura", mr: 450000, a: 0.44, m: 1.0 },
-    { id: 'alt1_l2', name: "Base estabilizada", mr: 300000, a: 0.30, m: 1.0 },
-    { id: 'alt1_l3', name: "Carpeta asfáltica (CA)", mr: 400000, a: 0.42, m: 1.0 },
-    { id: 'alt1_l4', name: "Base hidráulica", mr: 30000, a: 0.14, m: 1.0 },
-];
+const DEFAULT_ALT1_LAYERS: PavementLayer[] = [];
 
-const DEFAULT_ALT2_LAYERS: PavementLayer[] = [
-    { id: 'alt2_l1', name: "Capa de rodadura", mr: 450000, a: 0.44, m: 1.0 },
-    { id: 'alt2_l2', name: "Carpeta asfáltica (CA)", mr: 400000, a: 0.42, m: 1.0 },
-    { id: 'alt2_l3', name: "Base hidráulica", mr: 30000, a: 0.14, m: 1.0 },
-];
+const DEFAULT_ALT2_LAYERS: PavementLayer[] = [];
 
 const RIEGO_DE_SELLO_LAYER: PavementLayer = {
     id: 'riego_sello',
@@ -111,7 +102,8 @@ const StructureTable = ({
     onLayerChange,
     onAddLayer,
     onRemoveLayer,
-    onOpenCalc
+    onOpenCalc,
+    onReplicate
 }: { 
     title: string; 
     onTitleChange?: (newTitle: string) => void;
@@ -124,6 +116,7 @@ const StructureTable = ({
     onAddLayer?: () => void;
     onRemoveLayer?: (id: string) => void;
     onOpenCalc?: (layer: PavementLayer) => void;
+    onReplicate?: () => void;
 }) => {
     const { layers, snTotalProvided, esalsForSnTotal, remainingLifeYears } = data;
 
@@ -139,15 +132,28 @@ const StructureTable = ({
                         placeholder="Nombre de la estructura"
                     />
                 </div>
-                {isEditable && (
-                    <button 
-                        onClick={onAddLayer}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
-                    >
-                        <i className="fas fa-plus"></i>
-                        <span>Adicionar Capa</span>
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {onReplicate && (
+                        <button 
+                            onClick={onReplicate}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                            title="Replicar esta estructura a las alternativas"
+                        >
+                            <i className="fas fa-copy"></i>
+                            <span className="hidden sm:inline">Replicar a Alternativas</span>
+                            <span className="sm:hidden">Replicar</span>
+                        </button>
+                    )}
+                    {isEditable && (
+                        <button 
+                            onClick={onAddLayer}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                        >
+                            <i className="fas fa-plus"></i>
+                            <span>Adicionar Capa</span>
+                        </button>
+                    )}
+                </div>
             </div>
             <div className="p-4">
                 {/* Desktop View */}
@@ -415,13 +421,13 @@ const EsalsPage: React.FC = () => {
   // Inputs for AASHTO Design
   const [snSeed, setSnSeed] = useState<number>(2.0); 
   const [manualThicknesses, setManualThicknesses] = useState<Record<string, number>>({});
-  const [alt1Layers, setAlt1Layers] = useState<PavementLayer[]>(DEFAULT_ALT1_LAYERS);
-  const [alt2Layers, setAlt2Layers] = useState<PavementLayer[]>(DEFAULT_ALT2_LAYERS);
+  const [alt1Layers, setAlt1Layers] = useState<PavementLayer[]>([]);
+  const [alt2Layers, setAlt2Layers] = useState<PavementLayer[]>([]);
   const [isSaved, setIsSaved] = useState(false);
 
   // -- Custom Titles for Structures --
-  const [titleActual, setTitleActual] = useState("Estructura Actual");
-  const [titleAlt1, setTitleAlt1] = useState("Recuperación + CA");
+  const [titleActual, setTitleActual] = useState("PAV. Actual");
+  const [titleAlt1, setTitleAlt1] = useState("Bacheo + CA");
   const [titleAlt2, setTitleAlt2] = useState("Fresado + CA");
   const [titleAlt3, setTitleAlt3] = useState("Riego de sello");
 
@@ -509,8 +515,11 @@ const EsalsPage: React.FC = () => {
             // Prioritize global SN seed if it was updated in the new ESAL's page
             setSnSeed(currentGen.snSeed !== undefined ? currentGen.snSeed : (parsed.snSeed !== undefined ? parsed.snSeed : 4.0));
             if (parsed.manualThicknesses) setManualThicknesses(parsed.manualThicknesses);
-            if (parsed.alt1Layers) setAlt1Layers(parsed.alt1Layers);
-            if (parsed.alt2Layers) setAlt2Layers(parsed.alt2Layers);
+            
+            // Use saved layers if they exist, otherwise default to genData layers
+            setAlt1Layers(parsed.alt1Layers && parsed.alt1Layers.length > 0 ? parsed.alt1Layers : currentGen.layers);
+            setAlt2Layers(parsed.alt2Layers && parsed.alt2Layers.length > 0 ? parsed.alt2Layers : currentGen.layers);
+            
             if (parsed.titleActual) setTitleActual(parsed.titleActual);
             if (parsed.titleAlt1) setTitleAlt1(parsed.titleAlt1);
             if (parsed.titleAlt2) setTitleAlt2(parsed.titleAlt2);
@@ -518,6 +527,9 @@ const EsalsPage: React.FC = () => {
         } catch (e) { console.error(e); }
     } else {
         setSnSeed(currentGen.snSeed || 4.0);
+        // Default to genData.layers for all alternatives as requested
+        setAlt1Layers(currentGen.layers);
+        setAlt2Layers(currentGen.layers);
     }
   }, []);
 
@@ -781,33 +793,71 @@ const EsalsPage: React.FC = () => {
   const structureAlt3 = useMemo(() => calculateStructure([RIEGO_DE_SELLO_LAYER, ...genData.layers]), [genData.layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
 
   const handleRealThicknessChange = (layerId: string, val: string, _alt?: number) => {
-      const num = parseFloat(val);
-      const newThickness = isNaN(num) ? 0 : num;
+    const num = parseFloat(val);
+    const newThickness = isNaN(num) ? 0 : num;
 
-      setManualThicknesses(prev => {
-          const next = { ...prev, [layerId]: newThickness };
+    setManualThicknesses(prev => {
+      const next = { ...prev, [layerId]: newThickness };
 
-          // If changing actual structure (no _alt provided), replicate to alternatives by name
-          if (_alt === undefined) {
-              const sourceLayer = genData.layers.find(l => l.id === layerId);
-              if (sourceLayer) {
-                  // Replicate to Alt 1
-                  alt1Layers.forEach(l => {
-                      if (l.name === sourceLayer.name) {
-                          next[l.id] = newThickness;
-                      }
-                  });
-                  // Replicate to Alt 2
-                  alt2Layers.forEach(l => {
-                      if (l.name === sourceLayer.name) {
-                          next[l.id] = newThickness;
-                      }
-                  });
-              }
-          }
+      // If changing actual structure (no _alt provided), replicate to alternatives by name
+      if (_alt === undefined) {
+        const sourceLayer = genData.layers.find(l => l.id === layerId);
+        if (sourceLayer) {
+          // Replicate to Alt 1 (Bacheo + CA)
+          alt1Layers.forEach(l => {
+            if (l.name === sourceLayer.name) {
+              next[l.id] = newThickness;
+            }
+          });
+          // Replicate to Alt 2 (Fresado + CA)
+          alt2Layers.forEach(l => {
+            if (l.name === sourceLayer.name) {
+              next[l.id] = newThickness;
+            }
+          });
+        }
+      }
 
-          return next;
+      return next;
+    });
+  };
+
+  const handleReplicateActual = () => {
+    // 1. Copy layers from genData to alt1 and alt2
+    // We'll give them new IDs based on the original ID + alt prefix to avoid collisions
+    const copyLayers = (layers: PavementLayer[], prefix: string) => {
+      return layers.map(l => ({
+        ...l,
+        id: `${prefix}_${l.id}`
+      }));
+    };
+
+    const newAlt1 = copyLayers(genData.layers, 'alt1');
+    const newAlt2 = copyLayers(genData.layers, 'alt2');
+
+    setAlt1Layers(newAlt1);
+    setAlt2Layers(newAlt2);
+
+    // 2. Sync thicknesses
+    setManualThicknesses(prev => {
+      const next = { ...prev };
+      genData.layers.forEach(sourceLayer => {
+        // Get current thickness or calculated one
+        const thickness = prev[sourceLayer.id] !== undefined 
+          ? prev[sourceLayer.id] 
+          : Math.ceil((structureActual.layers.find(l => l.id === sourceLayer.id)?.h_cm_calc || 0) * 2) / 2;
+        
+        // Find corresponding layers in new sets
+        const targetAlt1 = newAlt1.find(l => l.id === `alt1_${sourceLayer.id}`);
+        if (targetAlt1) next[targetAlt1.id] = thickness;
+
+        const targetAlt2 = newAlt2.find(l => l.id === `alt2_${sourceLayer.id}`);
+        if (targetAlt2) next[targetAlt2.id] = thickness;
       });
+      return next;
+    });
+    
+    alert("Estructura replicada a Bacheo + CA y Fresado + CA");
   };
 
   const handleAltLayerChange = (alt: 1 | 2, layerId: string, field: keyof PavementLayer, value: any) => {
@@ -1592,6 +1642,7 @@ const EsalsPage: React.FC = () => {
             genData={genData} 
             handleRealThicknessChange={handleRealThicknessChange}
             formatNum={formatNum}
+            onReplicate={handleReplicateActual}
           />
 
           {/* 2. Alternativa 1: Recuperación + CA */}
