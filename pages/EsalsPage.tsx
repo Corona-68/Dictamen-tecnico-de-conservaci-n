@@ -6,6 +6,8 @@ import autoTable from "jspdf-autotable";
 import html2canvas from 'html2canvas';
 import { 
   BarChart, 
+  ComposedChart,
+  Line,
   Bar, 
   XAxis, 
   YAxis, 
@@ -941,6 +943,34 @@ const EsalsPage: React.FC = () => {
     return "#cbd5e1"; 
   };
 
+  const usedLayersLegend = useMemo(() => {
+    const layersMap = new Map<string, { name: string; code: string; color: string }>();
+    
+    // COLLECT FROM ACTUAL
+    structureActual.layers.forEach(l => {
+        const cat = LAYER_CATALOG.find(c => c.name === l.name);
+        const code = l.customCode || (cat ? cat.code : '??');
+        const color = getLayerColor(l.name);
+        if (!layersMap.has(l.name)) {
+            layersMap.set(l.name, { name: l.name, code, color });
+        }
+    });
+
+    // COLLECT FROM ALTERNATIVES
+    structuresAlternatives.forEach(alt => {
+        alt.data.layers.forEach(l => {
+            const cat = LAYER_CATALOG.find(c => c.name === l.name);
+            const code = l.customCode || (cat ? cat.code : '??');
+            const color = getLayerColor(l.name);
+            if (!layersMap.has(l.name)) {
+                layersMap.set(l.name, { name: l.name, code, color });
+            }
+        });
+    });
+
+    return Array.from(layersMap.values());
+  }, [structureActual.layers, structuresAlternatives]);
+
   const formatNum = (n: number | undefined, d: number = 2) => (n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
   const generatePDF = async () => {
@@ -1559,11 +1589,11 @@ const EsalsPage: React.FC = () => {
                                   <i className="fas fa-layer-group text-emerald-600"></i>
                                   Comparativa de Espesores de Estructura (cm)
                               </h4>
-                              <div className="h-[400px] w-full">
-                                  <ResponsiveContainer width="100%" height="100%">
-                                      <BarChart
+                              <div className="h-[450px] w-full">
+                                   <ResponsiveContainer width="100%" height="100%">
+                                      <ComposedChart
                                           data={structuralChartData}
-                                          margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+                                          margin={{ top: 40, right: 30, left: 20, bottom: 40 }}
                                       >
                                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                           <XAxis 
@@ -1577,11 +1607,13 @@ const EsalsPage: React.FC = () => {
                                           <YAxis 
                                               label={{ value: 'Espesor Total (cm)', angle: -90, position: 'insideLeft', offset: 0, style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
                                               tick={{ fontSize: 11, fill: '#64748b' }}
+                                              domain={[0, (dataMax: number) => Math.floor(dataMax * 1.2 / 10) * 10 + 10]}
                                           />
                                           <Tooltip 
+                                              cursor={{ fill: '#f8fafc', opacity: 0.4 }}
                                               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
                                               formatter={(value: number, name: string, props: any) => {
-                                                  const layerName = props.payload[`${name}_name`];
+                                                  const layerName = props.payload[`${props.dataKey}_name`];
                                                   return [`${value} cm`, layerName || name];
                                               }}
                                           />
@@ -1594,72 +1626,76 @@ const EsalsPage: React.FC = () => {
                                                    value: 'Rasante', 
                                                    fill: '#ef4444', 
                                                    fontSize: 14, 
-                                                   fontWeight: 'bold'
+                                                   fontWeight: 'bold',
+                                                   offset: 10
                                                }} 
                                           />
-                                          {/* We need to render Bars for each possible layer index in reverse to show first layer at top */}
-                                          {/* Assuming max 10 layers for safety */}
+                                          {/* Bars for layers - rendered in reverse order to show layer 0 at the top */}
                                           {[...Array(10)].map((_, index) => {
-                                              const i = 9 - index;
+                                              const i = 9 - index; 
                                               return (
                                                 <Bar 
                                                     key={`layer_${i}`}
                                                     dataKey={`layer_${i}`} 
                                                     stackId="a"
                                                     barSize={110}
+                                                    isAnimationActive={false}
                                                 >
-                                                    {structuralChartData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={getLayerColor(entry[`layer_${i}_name`] || '')} />
+                                                    {structuralChartData.map((entry, idx) => (
+                                                        <Cell key={`cell-${idx}`} fill={getLayerColor(entry[`layer_${i}_name`] || '')} />
                                                     ))}
                                                     <LabelList 
                                                         dataKey={`layer_${i}`} 
                                                         position="center" 
                                                         content={(props: any) => {
-                                                            const { x, y, width, height, value, payload } = props;
-                                                            if (!payload || height < 18) return null;
+                                                            const { x, y, width, height, payload } = props;
+                                                            if (!payload || height < 12) return null;
                                                             
                                                             const layerName = payload[`layer_${i}_name`] || '';
                                                             const code = payload[`layer_${i}_code`] || '??';
+                                                            const val = payload[`layer_${i}`];
                                                             
-                                                            // SB is a light color, so we use dark text for it
                                                             const isLight = layerName.toLowerCase().includes('sub-base') || layerName.toLowerCase().includes('subbase');
                                                             const textColor = isLight ? '#1e293b' : '#ffffff';
                                                             
+                                                            // Center position
+                                                            const centerX = x + width / 2;
+                                                            const centerY = y + height / 2;
+                                                            
                                                             return (
                                                                 <g>
-                                                                    {/* White box for the code label */}
                                                                     <rect 
-                                                                       x={x + width / 2 - 20} 
-                                                                       y={y + height / 2 - 20} 
-                                                                       width={40} 
-                                                                       height={22} 
+                                                                       x={centerX - 18} 
+                                                                       y={centerY - 16} 
+                                                                       width={36} 
+                                                                       height={18} 
                                                                        fill="white" 
                                                                        stroke="#cbd5e1"
                                                                        strokeWidth={0.5}
                                                                        rx={2}
                                                                     />
                                                                     <text 
-                                                                        x={x + width / 2} 
-                                                                        y={y + height / 2 - 9} 
+                                                                        x={centerX} 
+                                                                        y={centerY - 7} 
                                                                         fill="#1e293b" 
-                                                                        textAnchor="middle" 
-                                                                        dominantBaseline="middle" 
-                                                                        fontSize={12} 
-                                                                        fontWeight="bold"
-                                                                    >
-                                                                        {code}
-                                                                    </text>
-                                                                    <text 
-                                                                        x={x + width / 2} 
-                                                                        y={y + height / 2 + 15} 
-                                                                        fill={textColor} 
-                                                                        fillOpacity={0.9}
                                                                         textAnchor="middle" 
                                                                         dominantBaseline="middle" 
                                                                         fontSize={11} 
                                                                         fontWeight="bold"
                                                                     >
-                                                                        {value} cm
+                                                                        {code}
+                                                                    </text>
+                                                                    <text 
+                                                                        x={centerX} 
+                                                                        y={centerY + 12} 
+                                                                        fill={textColor} 
+                                                                        fillOpacity={0.9}
+                                                                        textAnchor="middle" 
+                                                                        dominantBaseline="middle" 
+                                                                        fontSize={10} 
+                                                                        fontWeight="bold"
+                                                                    >
+                                                                        {val} cm
                                                                     </text>
                                                                 </g>
                                                             );
@@ -1668,35 +1704,62 @@ const EsalsPage: React.FC = () => {
                                                 </Bar>
                                               );
                                           })}
-                                          {/* Invisible bar to show the total +X thickness labels */}
-                                          <Bar dataKey="totalThickness" stackId="a" fill="transparent">
-                                               <LabelList 
-                                                   dataKey="totalThickness" 
-                                                   position="top" 
-                                                   content={(props: any) => {
-                                                       const { x, y, width, value, index } = props;
-                                                       if (index === 0) return null;
-                                                       const diff = Math.round(value - actualTotalThickness);
-                                                       if (diff <= 0) return null;
-                                                       return (
-                                                           <text 
-                                                               x={x + width / 2} 
-                                                               y={y - 12} 
-                                                               fill="#ef4444" 
-                                                               textAnchor="middle" 
-                                                               fontSize={18} 
-                                                               fontWeight="bold"
-                                                           >
-                                                               +{diff}
-                                                           </text>
-                                                       );
-                                                   }}
-                                               />
-                                          </Bar>
-                                      </BarChart>
-                                  </ResponsiveContainer>
-                              </div>
-                              <div className="mt-4 text-center text-[10px] text-slate-400 italic">
+                                          {/* Invisible Line for total labels */}
+                                          <Line 
+                                              type="monotone" 
+                                              dataKey="totalThickness" 
+                                              stroke="none" 
+                                              dot={false}
+                                              isAnimationActive={false}
+                                          >
+                                              <LabelList 
+                                                  dataKey="totalThickness" 
+                                                  position="top" 
+                                                  content={(props: any) => {
+                                                      const { x, y, value, index } = props;
+                                                      if (index === 0) return null;
+                                                      const diff = Math.round(value - actualTotalThickness);
+                                                      if (diff <= 0) return null;
+                                                      return (
+                                                          <text 
+                                                              x={x} 
+                                                              y={y - 15} 
+                                                              fill="#ef4444" 
+                                                              textAnchor="middle" 
+                                                              fontSize={18} 
+                                                              fontWeight="bold"
+                                                          >
+                                                              +{diff}
+                                                          </text>
+                                                      );
+                                                  }}
+                                              />
+                                          </Line>
+                                      </ComposedChart>
+                                   </ResponsiveContainer>
+                               </div>
+
+                               {/* Legend / Symbology */}
+                               <div className="mt-8 px-4">
+                                   <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+                                       <div className="w-full text-center mb-1">
+                                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Simbología de Capas</span>
+                                       </div>
+                                       {usedLayersLegend.map((layer, idx) => (
+                                           <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-100 shadow-sm transition-all hover:scale-105">
+                                               <div 
+                                                   className="w-3 h-3 rounded-full border border-black/5" 
+                                                   style={{ backgroundColor: layer.color }}
+                                               ></div>
+                                               <div className="flex items-baseline gap-2">
+                                                   <span className="text-sm font-bold text-slate-700">{layer.code}</span>
+                                                   <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{layer.name}</span>
+                                               </div>
+                                           </div>
+                                       ))}
+                                   </div>
+                               </div>
+                               <div className="mt-4 text-center text-[10px] text-slate-400 italic">
                                   * Los espesores se muestran en centímetros (cm) y están apilados por capa.
                               </div>
                           </div>
