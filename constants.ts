@@ -39,7 +39,7 @@ export const DEFAULT_GENERAL_DATA: GeneralData = {
     rigidityLevel: 'low',
     drainageCoefficient: 0.9,
     layers: [
-        { id: 'l_init_1', name: "Carpeta asfáltica normal", mr: 361234, a: 0.400, m: 1.0, h_cm_existing: 0 }
+        { id: 'l_init_1', name: "Carpeta asfaltica normal", mr: 361234, a: 0.400, m: 1.0, h_cm_existing: 0 }
     ]
 };
 
@@ -47,6 +47,8 @@ export const DEFAULT_GENERAL_DATA: GeneralData = {
 export const LAYER_CATALOG = [
     { 
         name: "Carpeta asfáltica alto desempeño", 
+        code: "AD",
+        color: "#000000",
         values: {
             low: { mr: 725790, a: 0.524, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 768452, a: 0.534, m: 1.0, h_cm_existing: 0 },
@@ -54,7 +56,9 @@ export const LAYER_CATALOG = [
         }
     },
     { 
-        name: "Carpeta asfáltica normal", 
+        name: "Carpeta asfaltica normal", 
+        code: "CA",
+        color: "#4B5563",
         values: {
             low: { mr: 361234, a: 0.400, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 402713, a: 0.420, m: 1.0, h_cm_existing: 0 },
@@ -62,15 +66,49 @@ export const LAYER_CATALOG = [
         }
     },
     { 
-        name: "Base asfáltica", 
+        name: "Base asfáltica en caliente", 
+        code: "BA",
+        color: "#9CA3AF",
         values: {
-            low: { mr: 256745, a: 0.254, m: 1.0, h_cm_existing: 0 },
-            medium: { mr: 326164, a: 0.278, m: 1.0, h_cm_existing: 0 },
-            high: { mr: 395583, a: 0.302, m: 1.0, h_cm_existing: 0 }
+            low: { mr: 215960, a: 0.230, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 273661, a: 0.255, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 331362, a: 0.280, m: 1.0, h_cm_existing: 0 }
+        }
+    },
+    { 
+        name: "Base asfáltica estabilizada", 
+        code: "BE",
+        color: "#78350F",
+        values: {
+            low: { mr: 92583, a: 0.100, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 107603, a: 0.140, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 122623, a: 0.160, m: 1.0, h_cm_existing: 0 }
+        }
+    },
+    { 
+        name: "Base estabilizada con cal", 
+        code: "BO",
+        color: "#EAB308",
+        values: {
+            low: { mr: 22330, a: 0.110, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 50550, a: 0.190, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 80530, a: 0.240, m: 1.0, h_cm_existing: 0 }
+        }
+    },
+    { 
+        name: "Base con asfalto espumado", 
+        code: "BS",
+        color: "#93C5FD",
+        values: {
+            low: { mr: 203053, a: 0.200, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 290075, a: 0.250, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 471373, a: 0.300, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Base Cementada", 
+        code: "BC",
+        color: "#7E22CE",
         values: {
             low: { mr: 570000, a: 0.140, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 620000, a: 0.160, m: 1.0, h_cm_existing: 0 },
@@ -78,7 +116,9 @@ export const LAYER_CATALOG = [
         }
     },
     { 
-        name: "Base hidráulica", 
+        name: "Base hidráulica ó con RAP", 
+        code: "BH",
+        color: "#06B6D4",
         values: {
             low: { mr: 21150, a: 0.100, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 25446, a: 0.120, m: 1.0, h_cm_existing: 0 },
@@ -87,6 +127,8 @@ export const LAYER_CATALOG = [
     },
     { 
         name: "Sub-Base Hidráulica", 
+        code: "SB",
+        color: "#DBEAFE",
         values: {
             low: { mr: 11180, a: 0.080, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 13695, a: 0.100, m: 1.0, h_cm_existing: 0 },
@@ -95,6 +137,8 @@ export const LAYER_CATALOG = [
     },
     {
         name: CUSTOM_LAYER_NAME,
+        code: "??",
+        color: "#94a3b8",
         values: {
             low: { mr: 0, a: 0, m: 1.0, h_cm_existing: 0 },
             medium: { mr: 0, a: 0, m: 1.0, h_cm_existing: 0 },

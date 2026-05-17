@@ -17,7 +17,7 @@ import {
   ReferenceLine,
   LabelList
 } from 'recharts';
-import { calculateUnamTotalAccumulated } from '../utils/calculations';
+import { calculateUnamTotalAccumulated, calculateAFromMR, calculateMRFromA, getLayerFormulaType } from '../utils/calculations';
 
 const DEFAULT_ALT1_LAYERS: PavementLayer[] = [];
 
@@ -37,43 +37,6 @@ const getLayerValues = (layerName: string, rigidity: 'low' | 'medium' | 'high') 
     if (!layerData) return { mr: 0, a: 0, m: 1.0 };
     return layerData.values[rigidity];
 };
-
-function getLayerFormulaType(name: string): number {
-    const n = name.toLowerCase();
-    if (n.includes("carpeta") || n.includes("asfáltica") || n.includes("asfaltica")) return 1; // Asphalt
-    if (n.includes("base") && !n.includes("subbase")) return 2; // Base
-    if (n.includes("subbase")) return 3; // Subbase
-    return 0;
-}
-
-function calculateAFromMR(name: string, mr: number): number {
-    const type = getLayerFormulaType(name);
-    if (mr <= 0) return 0;
-    let a = 0.14;
-    if (type === 1) {
-        a = Math.max(0.05, Math.min(0.5, 0.40 * Math.log10(mr / 450000) + 0.44));
-    } else if (type === 2) {
-        a = Math.max(0.05, Math.min(0.2, 0.249 * Math.log10(mr) - 0.977));
-    } else if (type === 3) {
-        a = Math.max(0.05, Math.min(0.15, 0.227 * Math.log10(mr) - 0.839));
-    }
-    return Math.round(a * 100) / 100;
-}
-
-function calculateMRFromA(name: string, a: number): number {
-    const type = getLayerFormulaType(name);
-    if (a <= 0) return 30000;
-    if (type === 1) {
-        return Math.pow(10, (a - 0.44) / 0.40) * 450000;
-    }
-    if (type === 2) {
-        return Math.pow(10, (a + 0.977) / 0.249);
-    }
-    if (type === 3) {
-        return Math.pow(10, (a + 0.839) / 0.227);
-    }
-    return 30000;
-}
 
 // Approximation of Inverse Standard Normal Distribution (Probit)
 function inverseNormalCDF(p: number): number {
@@ -190,21 +153,42 @@ const StructureTable = ({
                             {layers.map((layer: any) => (
                                 <tr key={layer.id} className="hover:bg-slate-50">
                                     <td className="px-4 py-3">
-                                        {isEditable ? (
-                                                <select 
-                                                    value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name} 
-                                                    onChange={(e) => onLayerChange?.(layer.id, 'name', e.target.value)}
-                                                    className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none font-medium text-slate-900"
-                                                >
-                                                    {LAYER_CATALOG.map(cat => (
-                                                        <option key={cat.name} value={cat.name}>
-                                                            {cat.name === CUSTOM_LAYER_NAME && layer.customCode ? `${layer.name} (${layer.customCode})` : cat.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                        ) : (
-                                            <span className="font-medium text-slate-900">{layer.name}</span>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {(() => {
+                                                const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+                                                return <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: layer.customCode ? '#94a3b8' : (cat?.color || '#cbd5e1') }}></div>;
+                                            })()}
+                                            {isEditable ? (
+                                                 <select 
+                                                     value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name} 
+                                                     onChange={(e) => onLayerChange?.(layer.id, 'name', e.target.value)}
+                                                     className="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none font-medium text-slate-900"
+                                                 >
+                                                     {LAYER_CATALOG.map(cat => (
+                                                         <option key={cat.name} value={cat.name}>
+                                                             {cat.name === CUSTOM_LAYER_NAME && layer.customCode 
+                                                                 ? `${layer.name} (${layer.customCode})` 
+                                                                 : (cat.code && cat.code !== '??' ? `[${cat.code}] ${cat.name}` : cat.name)}
+                                                         </option>
+                                                     ))}
+                                                 </select>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-slate-900">{layer.name}</span>
+                                                    {layer.customCode ? (
+                                                        <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-bold">{layer.customCode}</span>
+                                                    ) : (
+                                                        (() => {
+                                                            const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+                                                            if (cat && cat.code && cat.code !== '??') {
+                                                                return <span className="text-[9px] bg-slate-200 text-slate-700 px-1 rounded font-bold">{cat.code}</span>;
+                                                            }
+                                                            return null;
+                                                        })()
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3 text-center">
                                         {isEditable ? (
@@ -485,11 +469,15 @@ const EsalsPage: React.FC = () => {
   };
 
   const handleAddAltLayer = (altId: string) => {
+      const defaultRigidity = genData.rigidityLevel || 'medium';
+      const defaultLayer = LAYER_CATALOG[0];
+      const defaultValues = defaultLayer.values[defaultRigidity];
+
       const newLayer: PavementLayer = {
           id: `alt_${altId}_l${Date.now()}`,
-          name: "Nueva Capa",
-          mr: 30000,
-          a: 0.14,
+          name: defaultLayer.name,
+          mr: defaultValues.mr,
+          a: defaultValues.a,
           m: 1.0
       };
       setAlternatives(prev => prev.map(alt => {
@@ -945,16 +933,28 @@ const EsalsPage: React.FC = () => {
     return [
       { 
         name: titleActual, 
-        ...structureActual.layers.reduce((acc, l, i) => ({ ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name }), {})
+        ...structureActual.layers.reduce((acc, l, i) => {
+            const cat = LAYER_CATALOG.find(c => c.name === l.name);
+            const code = l.customCode || (cat ? cat.code : '??');
+            return { ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name, [`layer_${i}_code`]: code };
+        }, {})
       },
       ...structuresAlternatives.map(alt => ({
         name: alt.title,
-        ...alt.data.layers.reduce((acc, l, i) => ({ ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name }), {})
+        ...alt.data.layers.reduce((acc, l, i) => {
+            const cat = LAYER_CATALOG.find(c => c.name === l.name);
+            const code = l.customCode || (cat ? cat.code : '??');
+            return { ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name, [`layer_${i}_code`]: code };
+        }, {})
       }))
     ];
   }, [titleActual, structureActual.layers, structuresAlternatives]);
 
   const getLayerColor = (name: string) => {
+    const layer = LAYER_CATALOG.find(l => l.name === name);
+    if (layer && layer.color) return layer.color;
+    
+    // Fallback for custom or unknown layers
     const n = name.toLowerCase();
     if (n.includes("carpeta") || n.includes("asfáltica")) return "#334155"; 
     if (n.includes("base") && !n.includes("subbase")) return "#64748b"; 
@@ -1294,7 +1294,7 @@ const EsalsPage: React.FC = () => {
          <h3 className="text-xl font-bold text-slate-900 mb-4">Configuración de Diseño</h3>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div>
-                 <label className="block text-sm text-slate-500 mb-1">SN Semilla (Iteración)</label>
+                 <label className="block text-sm text-slate-500 mb-1">SN (Número Estructural Sugerido)</label>
                  <div className="flex items-center gap-4">
                      <input
                         type="number"
@@ -1304,7 +1304,7 @@ const EsalsPage: React.FC = () => {
                         className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-slate-900 focus:border-blue-500 outline-none"
                      />
                      <div className="text-xs text-slate-400">
-                        Valor inicial para iteraciones.
+                        Valor inicial para el cálculo de aportes.
                      </div>
                  </div>
              </div>
@@ -1511,16 +1511,14 @@ const EsalsPage: React.FC = () => {
                               <ResponsiveContainer width="100%" height="100%">
                                   <BarChart
                                       data={chartData}
-                                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                                   >
                                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                       <XAxis 
                                           dataKey="name" 
-                                          angle={-45} 
-                                          textAnchor="end" 
-                                          height={80} 
+                                          height={50} 
                                           interval={0}
-                                          tick={{ fontSize: 11, fontWeight: 500, fill: '#64748b' }}
+                                          tick={{ fontSize: 12, fontWeight: 600, fill: '#475569' }}
                                       />
                                       <YAxis 
                                           label={{ value: 'SN Aportado', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
@@ -1535,9 +1533,9 @@ const EsalsPage: React.FC = () => {
                                           y={snRequiredTotalManual} 
                                           stroke="#ef4444" 
                                           strokeDasharray="5 5" 
-                                          label={{ position: 'right', value: `SN Req: ${formatNum(snRequiredTotalManual)}`, fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} 
+                                          label={{ position: 'right', value: `SN Req: ${formatNum(snRequiredTotalManual)}`, fill: '#ef4444', fontSize: 12, fontWeight: 'bold' }} 
                                       />
-                                      <Bar dataKey="sn" name="SN Aportado" radius={[6, 6, 0, 0]} barSize={40}>
+                                      <Bar dataKey="sn" name="SN Aportado" radius={[6, 6, 0, 0]} barSize={80}>
                                           {chartData.map((entry, index) => (
                                               <Cell 
                                                   key={`cell-${index}`} 
@@ -1548,7 +1546,7 @@ const EsalsPage: React.FC = () => {
                                               dataKey="sn" 
                                               position="top" 
                                               formatter={(val: number) => formatNum(val)}
-                                              style={{ fontSize: 10, fontWeight: 'bold', fill: '#475569' }}
+                                              style={{ fontSize: 12, fontWeight: 'bold', fill: '#1e293b' }}
                                           />
                                       </Bar>
                                   </BarChart>
@@ -1579,16 +1577,14 @@ const EsalsPage: React.FC = () => {
                                   <ResponsiveContainer width="100%" height="100%">
                                       <BarChart
                                           data={structuralChartData}
-                                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                                          margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                                       >
                                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                           <XAxis 
                                               dataKey="name" 
-                                              angle={-45} 
-                                              textAnchor="end" 
-                                              height={80} 
+                                              height={50} 
                                               interval={0}
-                                              tick={{ fontSize: 11, fontWeight: 500, fill: '#64748b' }}
+                                              tick={{ fontSize: 12, fontWeight: 600, fill: '#475569' }}
                                           />
                                           <YAxis 
                                               label={{ value: 'Espesor Total (cm)', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
@@ -1601,30 +1597,66 @@ const EsalsPage: React.FC = () => {
                                                   return [`${value} cm`, layerName || name];
                                               }}
                                           />
-                                          {/* We need to render Bars for each possible layer index */}
+                                          {/* We need to render Bars for each possible layer index in reverse to show first layer at top */}
                                           {/* Assuming max 10 layers for safety */}
-                                          {[...Array(10)].map((_, i) => (
-                                              <Bar 
-                                                  key={`layer_${i}`}
-                                                  dataKey={`layer_${i}`} 
-                                                  stackId="a" 
-                                                  fill={getLayerColor(structuralChartData[0]?.[`layer_${i}_name`] || '')}
-                                              >
-                                                  <LabelList 
-                                                      dataKey={`layer_${i}`} 
-                                                      position="center" 
-                                                      content={(props: any) => {
-                                                          const { x, y, width, height, value } = props;
-                                                          if (height < 15) return null;
-                                                          return (
-                                                              <text x={x + width / 2} y={y + height / 2} fill="#fff" textAnchor="middle" dominantBaseline="middle" fontSize={10} fontWeight="bold">
-                                                                  {value}
-                                                              </text>
-                                                          );
-                                                      }}
-                                                  />
-                                              </Bar>
-                                          ))}
+                                          {[...Array(10)].map((_, index) => {
+                                              const i = 9 - index;
+                                              return (
+                                                <Bar 
+                                                    key={`layer_${i}`}
+                                                    dataKey={`layer_${i}`} 
+                                                    stackId="a"
+                                                    barSize={100}
+                                                >
+                                                    {structuralChartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={getLayerColor(entry[`layer_${i}_name`] || '')} />
+                                                    ))}
+                                                    <LabelList 
+                                                        dataKey={`layer_${i}`} 
+                                                        position="center" 
+                                                        content={(props: any) => {
+                                                            const { x, y, width, height, value, payload } = props;
+                                                            if (!payload || height < 18) return null;
+                                                            
+                                                            const layerName = payload[`layer_${i}_name`] || '';
+                                                            const code = payload[`layer_${i}_code`] || '??';
+                                                            
+                                                            // SB is a light color, so we use dark text for it
+                                                            const isLight = layerName.toLowerCase().includes('sub-base') || layerName.toLowerCase().includes('subbase');
+                                                            const textColor = isLight ? '#1e293b' : '#ffffff';
+                                                            
+                                                            return (
+                                                                <g>
+                                                                    <text 
+                                                                        x={x + width / 2} 
+                                                                        y={y + height / 2 - 6} 
+                                                                        fill={textColor} 
+                                                                        textAnchor="middle" 
+                                                                        dominantBaseline="middle" 
+                                                                        fontSize={13} 
+                                                                        fontWeight="bold"
+                                                                    >
+                                                                        {code}
+                                                                    </text>
+                                                                    <text 
+                                                                        x={x + width / 2} 
+                                                                        y={y + height / 2 + 10} 
+                                                                        fill={textColor} 
+                                                                        fillOpacity={0.9}
+                                                                        textAnchor="middle" 
+                                                                        dominantBaseline="middle" 
+                                                                        fontSize={11} 
+                                                                        fontWeight="bold"
+                                                                    >
+                                                                        {value} cm
+                                                                    </text>
+                                                                </g>
+                                                            );
+                                                        }}
+                                                    />
+                                                </Bar>
+                                              );
+                                          })}
                                       </BarChart>
                                   </ResponsiveContainer>
                               </div>
@@ -1761,13 +1793,39 @@ const EsalsPage: React.FC = () => {
                   <div className="space-y-6 overflow-y-auto pr-2">
                       <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre de la Capa</label>
-                          <div className="p-3 bg-slate-50 rounded border border-slate-200 font-medium text-slate-700">
+                          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded border border-slate-200 font-medium text-slate-700">
                               {calcLayerData.name}
+                              {(() => {
+                                  const cat = LAYER_CATALOG.find(c => c.name === calcLayerData.name);
+                                  return <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat?.color || '#cbd5e1' }}></div>;
+                              })()}
                           </div>
+                      </div>
+
+                      <div>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Valores de Tabla (Rigidez)</label>
+                          <div className="grid grid-cols-3 gap-2">
+                              {[
+                                  { val: 'low', label: 'Bajo' },
+                                  { val: 'medium', label: 'Medio' },
+                                  { val: 'high', label: 'Alto' }
+                              ].map((opt) => (
+                                  <button
+                                      key={opt.val}
+                                      onClick={() => {
+                                          const newValues = getLayerValues(calcLayerData.name, opt.val as any);
+                                          setCalcLayerData(prev => prev ? ({ ...prev, mr: newValues.mr, a: newValues.a }) : null);
+                                      }}
+                                      className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded border border-slate-200 text-xs font-semibold transition-colors"
+                                  >
+                                      {opt.label}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
                           <p className="text-[10px] text-slate-400 mt-1 italic">
                               Las fórmulas dependen del nombre (ej. "Carpeta", "Base hidráulica").
                           </p>
-                      </div>
 
                       <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Módulo Resiliente (psi)</label>

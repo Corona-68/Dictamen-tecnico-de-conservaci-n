@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ScatterChart, Scatter, ZAxis } from 'recharts';
 import { GeneralData, PavementLayer } from '../types';
 import { DEFAULT_GENERAL_DATA, LAYER_CATALOG, CUSTOM_LAYER_NAME, DEFAULT_COMPOSITION } from '../constants';
-import { calculateEjesResults, calculateEsalRows } from '../utils/calculations';
+import { calculateEjesResults, calculateEsalRows, calculateAFromMR, calculateMRFromA, getLayerFormulaType } from '../utils/calculations';
 import { useFirebase } from '../components/FirebaseProvider';
 import { db, setDoc, doc, Timestamp, handleFirestoreError, OperationType, deleteDoc, getDoc } from '../firebase';
 
@@ -336,40 +336,6 @@ const GeneralDataPage: React.FC = () => {
   };
 
   // --- Layer Property Calculator Logic ---
-  const getFormulaType = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes("alto desempeño")) return 1;
-    if (n.includes("carpeta asfáltica normal") || n === "base asfáltica") return 2;
-    if (n.includes("cementada")) return 3;
-    if (n === "base hidráulica") return 4;
-    if (n === "sub-base hidráulica") return 5;
-    return 0;
-  };
-
-  const calculateAFromMR = (name: string, mr: number) => {
-    const type = getFormulaType(name);
-    if (type === 0 || mr <= 0) return 0;
-    let a = 0;
-    if (type === 1) a = 0.171 * Math.log(mr) - 1.784;
-    if (type === 2) a = 0.184 * Math.log(mr) - 1.9547;
-    if (type === 3) a = 0.0000004 * mr - 0.0702;
-    if (type === 4) a = 0.249 * Math.log10(mr) - 0.977;
-    if (type === 5) a = 0.227 * Math.log10(mr) - 0.839;
-    return Math.max(0, parseFloat(a.toFixed(2)));
-  };
-
-  const calculateMRFromA = (name: string, a: number) => {
-    const type = getFormulaType(name);
-    if (type === 0 || a <= 0) return 0;
-    let mr = 0;
-    if (type === 1) mr = Math.exp((a + 1.784) / 0.171);
-    if (type === 2) mr = Math.exp((a + 1.9547) / 0.184);
-    if (type === 3) mr = (a + 0.0702) / 0.0000004;
-    if (type === 4) mr = Math.pow(10, (a + 0.977) / 0.249);
-    if (type === 5) mr = Math.pow(10, (a + 0.839) / 0.227);
-    return Math.round(mr);
-  };
-
   const handleOpenCalc = (layer: PavementLayer) => {
     setCalcLayerData({ id: layer.id, name: layer.name, mr: layer.mr, a: layer.a });
     setIsCalcModalOpen(true);
@@ -1160,9 +1126,13 @@ const GeneralDataPage: React.FC = () => {
 
                         {/* Desktop & Mobile Content */}
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-2 items-center">
-                            {/* Index - Desktop Only */}
-                            <div className="hidden md:block col-span-1 text-center font-bold text-slate-400">
-                                {index + 1}
+                            {/* Index & Color - Desktop Only */}
+                            <div className="hidden md:flex col-span-1 items-center justify-center gap-1.5">
+                                <span className="font-bold text-slate-400">{index + 1}</span>
+                                {(() => {
+                                    const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+                                    return <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: layer.customCode ? '#94a3b8' : (cat?.color || '#cbd5e1') }}></div>;
+                                })()}
                             </div>
 
                             {/* Name/Select */}
@@ -1175,7 +1145,9 @@ const GeneralDataPage: React.FC = () => {
                                 >
                                     {LAYER_CATALOG.map(cat => (
                                         <option key={cat.name} value={cat.name}>
-                                            {cat.name === CUSTOM_LAYER_NAME && layer.customCode ? `${layer.name} (${layer.customCode})` : cat.name}
+                                            {cat.name === CUSTOM_LAYER_NAME && layer.customCode 
+                                                ? `${layer.name} (${layer.customCode})` 
+                                                : (cat.code && cat.code !== '??' ? `[${cat.code}] ${cat.name}` : cat.name)}
                                         </option>
                                     ))}
                                 </select>
@@ -1315,7 +1287,35 @@ const GeneralDataPage: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-500/40 backdrop-blur-sm overflow-y-auto">
               <div className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md p-6 my-auto">
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Calculadora de Capa</h3>
-                  <p className="text-slate-500 text-sm mb-6">{calcLayerData.name}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-slate-500 text-sm">{calcLayerData.name}</p>
+                    {(() => {
+                        const cat = LAYER_CATALOG.find(c => c.name === calcLayerData.name);
+                        return <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat?.color || '#cbd5e1' }}></div>;
+                    })()}
+                  </div>
+
+                  <div className="mb-6">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Valores de Tabla (Rigidez)</label>
+                      <div className="grid grid-cols-3 gap-2">
+                          {[
+                              { val: 'low', label: 'Bajo' },
+                              { val: 'medium', label: 'Medio' },
+                              { val: 'high', label: 'Alto' }
+                          ].map((opt) => (
+                              <button
+                                  key={opt.val}
+                                  onClick={() => {
+                                      const newValues = getLayerValues(calcLayerData.name, opt.val as any);
+                                      setCalcLayerData(prev => prev ? ({ ...prev, mr: newValues.mr, a: newValues.a }) : null);
+                                  }}
+                                  className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded border border-slate-200 text-xs font-semibold transition-colors"
+                              >
+                                  {opt.label}
+                              </button>
+                          ))}
+                      </div>
+                  </div>
                   
                   <div className="space-y-6">
                       <div>
@@ -1369,7 +1369,7 @@ const GeneralDataPage: React.FC = () => {
                           </div>
                       </div>
 
-                      {getFormulaType(calcLayerData.name) === 0 && (
+                      {getLayerFormulaType(calcLayerData.name) === 0 && (
                           <div className="bg-amber-50 border border-amber-200 p-3 rounded text-xs text-amber-700">
                             <i className="fas fa-exclamation-triangle mr-2"></i>
                             No hay fórmulas predefinidas para este tipo de capa. Ingrese los valores manualmente.

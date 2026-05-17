@@ -116,35 +116,50 @@ export function calculateEsalRows(genData: GeneralData, snSeed: number, ejesResu
 
 export function getLayerFormulaType(name: string): number {
     const n = name.toLowerCase();
-    if (n.includes("alto desempeño")) return 1;
-    if (n.includes("carpeta asfáltica normal") || n === "base asfáltica" || n.includes("carpeta asfáltica nueva") || n.includes("base asfáltica nueva")) return 2;
-    if (n.includes("cementada")) return 3;
-    if (n.includes("base hidráulica")) return 4;
-    if (n.includes("sub-base hidráulica")) return 5;
+    if (n.includes("alto desempeño")) return 1; // AD
+    if (n.includes("asfaltica normal") || n.includes("asfáltica normal")) return 2; // CA
+    if (n.includes("caliente") || (n.includes("asfáltica") && n.includes("estabilizada"))) return 3; // BA, BE
+    if (n.includes("con cal")) return 4; // BO
+    if (n.includes("espumado")) return 5; // BS
+    if (n.includes("cementada")) return 6; // BC
+    if (n.includes("hidráulica ó con rap") || n.includes("hidraulica ó con rap")) return 7; // BH
+    if (n.includes("sub-base hidráulica")) return 8; // SB
     return 0;
 }
 
 export function calculateAFromMR(name: string, mr: number): number {
     const type = getLayerFormulaType(name);
-    if (type === 0 || mr <= 0) return 0;
+    if (mr <= 0) return 0;
     let a = 0;
-    if (type === 1) a = 0.171 * Math.log(mr) - 1.784;
-    if (type === 2) a = 0.184 * Math.log(mr) - 1.9547;
-    if (type === 3) a = 0.0000004 * mr - 0.0702;
-    if (type === 4) a = 0.249 * Math.log10(mr) - 0.977;
-    if (type === 5) a = 0.227 * Math.log10(mr) - 0.839;
-    return Math.max(0, parseFloat(a.toFixed(3)));
+    switch (type) {
+        case 1: a = 0.184 * Math.log(mr) - 1.9547; break; // AD
+        case 2: a = 0.171 * Math.log(mr) - 1.784; break;  // CA
+        case 3: a = 0.1255 * Math.log(mr) - 1.3141; break; // BA, BE
+        case 4: a = 0.1081 * Math.log(mr) - 0.977; break;  // BO
+        case 5: a = 0.1178 * Math.log(mr) - 1.237; break;  // BS
+        case 6: a = 0.2302 * Math.log(mr) - 2.9114; break; // BC
+        case 7: a = 0.249 * Math.log10(mr) - 0.977; break; // BH
+        case 8: a = 0.227 * Math.log10(mr) - 0.839; break; // SB
+        default: a = 0.14;
+    }
+    return Math.max(0.01, Math.min(0.6, parseFloat(a.toFixed(3))));
 }
 
 export function calculateMRFromA(name: string, a: number): number {
     const type = getLayerFormulaType(name);
-    if (type === 0 || a <= 0) return 0;
+    if (a <= 0) return 30000;
     let mr = 0;
-    if (type === 1) mr = Math.exp((a + 1.784) / 0.171);
-    if (type === 2) mr = Math.exp((a + 1.9547) / 0.184);
-    if (type === 3) mr = (a + 0.0702) / 0.0000004;
-    if (type === 4) mr = Math.pow(10, (a + 0.977) / 0.249);
-    if (type === 5) mr = Math.pow(10, (a + 0.839) / 0.227);
+    switch (type) {
+        case 1: mr = Math.exp((a + 1.9547) / 0.184); break;
+        case 2: mr = Math.exp((a + 1.784) / 0.171); break;
+        case 3: mr = Math.exp((a + 1.3141) / 0.1255); break;
+        case 4: mr = Math.exp((a + 0.977) / 0.1081); break;
+        case 5: mr = Math.exp((a + 1.237) / 0.1178); break;
+        case 6: mr = Math.exp((a + 2.9114) / 0.2302); break;
+        case 7: mr = Math.pow(10, (a + 0.977) / 0.249); break;
+        case 8: mr = Math.pow(10, (a + 0.839) / 0.227); break;
+        default: mr = 30000;
+    }
     return Math.round(mr);
 }
 
