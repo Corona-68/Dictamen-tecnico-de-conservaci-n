@@ -648,35 +648,6 @@ const GeneralDataPage: React.FC = () => {
           <p className="text-slate-600">Parámetros fundamentales para el cálculo de ejes y diseño AASHTO.</p>
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowProjectList(!showProjectList)}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg border border-slate-300 transition-all"
-          >
-            <i className="fas fa-folder-open"></i>
-            <span>Mis Proyectos</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleCloudSave}
-            disabled={isCloudSaving}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all shadow-md relative ${
-              isCloudSaving 
-                ? 'bg-slate-400 cursor-not-allowed text-white' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-          >
-            <i className={`fas ${isCloudSaving ? 'fa-spinner fa-spin' : 'fa-cloud-upload-alt'}`}></i>
-            <span>{isCloudSaving ? 'Guardando...' : 'Guardar en Nube'}</span>
-            
-            {cloudMessage && (
-              <div className={`absolute top-full right-0 mt-2 p-2 rounded shadow-lg text-xs whitespace-nowrap z-50 animate-in fade-in slide-in-from-top-2 duration-300 ${
-                cloudMessage.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-              }`}>
-                {cloudMessage.text}
-              </div>
-            )}
-          </button>
         </div>
       </header>
 

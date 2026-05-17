@@ -645,6 +645,7 @@ const EsalsPage: React.FC = () => {
                   id: `v_row_${index}`,
                   no: staticRow[0],
                   tipo: staticRow[1],
+                  estado: staticRow[2],
                   l2,
                   lxKip,
                   count
@@ -975,7 +976,7 @@ const EsalsPage: React.FC = () => {
 
   const generatePDF = async () => {
     // Small delay to ensure charts are rendered and animations (if any) are done
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const doc = new jsPDF({
         orientation: 'portrait',
@@ -983,308 +984,403 @@ const EsalsPage: React.FC = () => {
         format: 'letter'
     });
     const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Dictámenes técnicos de conservación periódica 2026", pageWidth / 2, 20, { align: "center" });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Generado el: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, pageWidth / 2, 28, { align: "center" });
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentWidth = pageWidth - (margin * 2);
 
-    // 0. Project Information
-    doc.setFontSize(14);
-    doc.setTextColor(51, 65, 85);
-    doc.text("0. Información del Proyecto", 14, 40);
+    // --- HELPER TO DRAW CARD-LIKE BOXES ---
+    const drawCard = (y: number, height: number, title?: string, icon?: string) => {
+        // Shadow effect
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.roundedRect(margin, y, contentWidth, height, 3, 3, 'F');
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setLineWidth(0.2);
+        doc.roundedRect(margin, y, contentWidth, height, 3, 3, 'D');
+
+        if (title) {
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text(title, margin + 8, y + 8);
+        }
+    };
+
+    const addHeader = (title: string, subTitle?: string) => {
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        doc.text(title, margin, 25);
+        if (subTitle) {
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100, 116, 139);
+            doc.text(subTitle, margin, 32);
+        }
+    };
+
+    // ==========================================
+    // PAGE 1: DATOS GENERALES
+    // ==========================================
+    addHeader("Datos Generales", "Parámetros fundamentales para el cálculo de ejes y diseño AASHTO.");
     
+    // Información del Camino
+    drawCard(42, 40, "Información del Camino");
     autoTable(doc, {
-      startY: 45,
-      head: [['Concepto', 'Descripción']],
+      startY: 52,
+      margin: { left: margin + 5, right: margin + 5 },
+      tableWidth: contentWidth - 10,
+      head: [['Concepto', 'Valor']],
       body: [
-        ['Carretera', genData.projectName || '-'],
+        ['Nombre del Proyecto', genData.projectName || '-'],
         ['Tramo', genData.section || '-'],
         ['Clasificación oficial', genData.roadType || '-'],
         ['Tipo de Red (DGCC)', genData.networkType || '-'],
       ],
-      theme: 'grid',
-      headStyles: { fillColor: [51, 65, 85] }
-    });
-
-    // 1. General Data
-    doc.setFontSize(14);
-    doc.setTextColor(51, 65, 85);
-    doc.text("1. Parámetros de Diseño", 14, (doc as any).lastAutoTable.finalY + 15);
-    
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 20,
-      head: [['Parámetro', 'Valor', 'Unidad']],
-      body: [
-        ['Tránsito Diario Inicial (TDPA)', formatNum(genData.tdpa, 0), 'Vehículos'],
-        ['Vehículos Cargados (Pvc)', formatNum(genData.pvc, 1), '%'],
-        ['Carriles por Sentido', genData.lanes, '-'],
-        ['Tasa de Crecimiento', formatNum(genData.growthRate, 2), '%'],
-        ['Periodo de Diseño', genData.designPeriod, 'Años'],
-        ['Confiabilidad (R)', formatNum(genData.reliability, 1), '%'],
-        ['Desviación Estándar (So)', formatNum(genData.standardDeviation, 2), '-'],
-        ['Módulo Resiliente Subrasante (Mr)', formatNum(genData.subgradeMr, 0), 'psi'],
-        ['Servicialidad Inicial (Po)', '4.2', '-'],
-        ['Servicialidad Final (Pt)', formatNum(genData.finalServiceability, 1), '-'],
-      ],
-      theme: 'striped',
-      headStyles: { fillColor: [71, 85, 105] }
-    });
-
-    // 1.1 Vehicle Composition (if applicable)
-    if (method === 'vehicles') {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text("1.1 Composición Vehicular", 14, 20);
-      
-      const compBody = VEHICLE_NAMES
-        .map((name, idx) => ({ name, value: compData[idx] || 0 }))
-        .filter(item => item.value > 0)
-        .map(item => [item.name, formatNum(item.value, 2) + '%']);
-      
-      autoTable(doc, {
-        startY: 25,
-        head: [['Vehículo', 'Participación (%)']],
-        body: compBody,
-        theme: 'striped',
-        headStyles: { fillColor: [51, 65, 85] }
-      });
-    }
-
-    // 2. Requerimiento de calidad de mezcla asfáltica y Análisis de Tránsito
-    const unamResults = calculateUnamTotalAccumulated(genData, compData, 0); // Z=0 as requested
-    const totalUnam = unamResults.totalAccumulated;
-    const isPerformance = totalUnam > 10000000;
-
-    doc.addPage();
-    doc.setFontSize(14);
-    doc.setTextColor(51, 65, 85);
-    doc.text("2. Análisis de Tránsito y Calidad de Mezcla", 14, 20);
-    
-    doc.setFontSize(12);
-    doc.text("2.1 Requerimiento de calidad de mezcla asfáltica", 14, 30);
-    doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
-    const unamText = `Para uniformizar el criterio y establecer los requisitos de selección del tipo de asfalto, de los materiales pétreos, del nivel de tránsito para diseño de mezclas, se obtiene el número de ejes equivalentes de 8,2 t acumulados durante el periodo de servicio del pavimento en el carril de diseño que en ningún caso será menor de diez (10) años; obtenido con el método de Instituto de Ingeniería de la UNAM para condición de daño superficial (L Z=0). el cual es ${formatNum(totalUnam, 0)}, ${isPerformance ? "por lo que se requiere que se diseñe por el método por desempeño" : "por lo que se requiere que se diseñe por el método Marshall"}.`;
-    
-    const splitUnamText = doc.splitTextToSize(unamText, pageWidth - 28);
-    doc.text(splitUnamText, 14, 38);
-
-    // UNAM Table
-    const unamRows = unamResults.rows
-      .filter(r => r.equiv > 0)
-      .map(r => [
-        r.no,
-        r.tipo,
-        r.estado,
-        formatNum(r.wTon, 1),
-        formatNum(r.ejes, 0),
-        r.damage.toFixed(5),
-        formatNum(r.equiv, 0)
-      ]);
-
-    autoTable(doc, {
-      startY: 38 + (splitUnamText.length * 5) + 5,
-      head: [['No.', 'Tipo', 'Estado', 'W (Ton)', 'Ejes 1er Año', 'Daño Unit.', 'Ejes Equiv.']],
-      body: unamRows,
-      theme: 'grid',
-      headStyles: { fillColor: [71, 85, 105] },
-      styles: { fontSize: 8 }
-    });
-
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 2,
-      body: [
-        ['Suma Ejes Equiv. 1er Año', formatNum(unamResults.totalEquiv1stYear, 0)],
-        ['Coef. Acumulación (CT)', unamResults.ct.toFixed(4)],
-        ['Total Ejes Equiv. Acumulados', formatNum(unamResults.totalAccumulated, 0)],
-      ],
-      theme: 'grid',
-      styles: { fontSize: 9, fontStyle: 'bold' },
-      columnStyles: { 0: { cellWidth: 100 } }
-    });
-
-    const unamTableFinalY = (doc as any).lastAutoTable.finalY;
-
-    doc.setFontSize(12);
-    doc.setTextColor(51, 65, 85);
-    doc.text("2.2 Análisis de Tránsito (ESALs)", 14, unamTableFinalY + 10);
-    autoTable(doc, {
-      startY: unamTableFinalY + 15,
-      head: [['Concepto', 'Valor']],
-      body: [
-        ['ESALs Primer Año (W18_1)', formatNum(totalESALs1Year, 0)],
-        ['Factor de Crecimiento', formatNum(growthFactor, 2)],
-        ['ESALs de Diseño (W18_design)', formatNum(totalESALsDesign, 0)],
-      ],
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59] }
-    });
-
-    // 2.3 Descripción o diagnóstico del estado físico del tramo
-    const diagnosisY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(12);
-    doc.setTextColor(51, 65, 85);
-    doc.text("2.3 Descripción o diagnóstico del estado físico del tramo", 14, diagnosisY);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
-    const diagnosisText = genData.diagnosis || "No se ingresó descripción o diagnóstico.";
-    const splitDiagnosisText = doc.splitTextToSize(diagnosisText, pageWidth - 28);
-    doc.text(splitDiagnosisText, 14, diagnosisY + 8);
-
-    // 2.4 Tipo de asfalto requerido grado PG
-    const asphaltY = diagnosisY + 8 + (splitDiagnosisText.length * 5) + 10;
-    doc.setFontSize(12);
-    doc.setTextColor(51, 65, 85);
-    doc.text("2.4 Tipo de asfalto requerido grado PG", 14, asphaltY);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(30, 41, 59);
-    doc.text(genData.asphaltGrade || "70H-16", 14, asphaltY + 8);
-
-    // 3. SN Requirements
-    const snReqY = asphaltY + 18;
-    // Check if we need a new page for section 3
-    let currentY = snReqY;
-    if (currentY > doc.internal.pageSize.getHeight() - 40) {
-        doc.addPage();
-        currentY = 20;
-    }
-
-    doc.setFontSize(14);
-    doc.setTextColor(51, 65, 85);
-    doc.text("3. Requerimientos Estructurales (AASHTO-93)", 14, currentY);
-    autoTable(doc, {
-      startY: currentY + 5,
-      head: [['Parámetro', 'Valor']],
-      body: [
-        ['Diferencia de Servicialidad (ΔPSI)', formatNum(4.2 - genData.finalServiceability, 1)],
-        ['Número Estructural Requerido (SN)', formatNum(snRequiredTotalManual, 2)],
-      ],
       theme: 'plain',
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' }
     });
 
-    // 4. Resumen Comparativo de Alternativas
+    // Parámetros de Tránsito & Factores AASHTO
+    // (Two columns simulation)
+    const midX = pageWidth / 2;
+    drawCard(95, 60, "Parámetros de Tránsito");
+    autoTable(doc, {
+        startY: 105,
+        margin: { left: margin + 5, right: midX + 2 },
+        head: [['Parámetro', 'Valor']],
+        body: [
+          ['TDPA (Vehículos)', formatNum(genData.tdpa, 0)],
+          ['% Vehículos Cargados (Pvc)', formatNum(genData.pvc, 1) + '%'],
+          ['Tasa Crecimiento (r)', formatNum(genData.growthRate, 2) + '%'],
+          ['Periodo Diseño (n)', genData.designPeriod + ' años'],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' }
+    });
+
+    // Box for Design factors
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(midX + 2, 95, contentWidth / 2 - 2, 60, 3, 3, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(midX + 2, 95, contentWidth / 2 - 2, 60, 3, 3, 'D');
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text("Factores de Diseño (AASHTO)", midX + 8, 103);
+    autoTable(doc, {
+        startY: 105,
+        margin: { left: midX + 5, right: margin + 5 },
+        head: [['Parámetro', 'Valor']],
+        body: [
+            ['Confiabilidad (R)', formatNum(genData.reliability, 1) + '%'],
+            ['Desv. Estándar (So)', formatNum(genData.standardDeviation, 2)],
+            ['Serviciabilidad (Pt)', formatNum(genData.finalServiceability, 1)],
+            ['Módulo MR (Subrasante)', formatNum(genData.subgradeMr, 0) + ' psi'],
+            ['N° de Carriles', genData.lanes],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' }
+    });
+
+    // ==========================================
+    // PAGE 2: DIAGNÓSTICO & CAPAS
+    // ==========================================
     doc.addPage();
-    doc.setFontSize(16);
-    doc.setTextColor(51, 65, 85);
-    doc.text("4. Resumen Comparativo de Alternativas", 14, 20);
+    // Header for diagnostic
+    drawCard(20, 40, "Descripción o diagnóstico del estado físico del tramo");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    const diagnosisLines = doc.splitTextToSize(genData.diagnosis || "Sin diagnóstico disponible.", contentWidth - 10);
+    doc.text(diagnosisLines, margin + 5, 33);
+
+    // Asphalt type
+    drawCard(65, 20, "Tipo de asfalto requerido grado PG");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text(genData.asphaltGrade || "70H-16", margin + 5, 78);
+
+    // Layer Structure (Input)
+    drawCard(90, 110, "Estructuración de Capas");
+    autoTable(doc, {
+        startY: 100,
+        margin: { left: margin+5, right: margin+5 },
+        head: [['#', 'CAPA', 'MÓDULO (PSI)', 'APORTE (A)', 'ESPESOR (CM)']],
+        body: genData.layers.map((l, i) => [
+            i + 1,
+            l.name,
+            formatNum(l.mr, 0),
+            formatNum(l.a, 2),
+            formatNum(l.h_cm_existing, 1)
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] }
+    });
+
+    // ==========================================
+    // PAGE 3: VEHÍCULOS % & UNAM
+    // ==========================================
+    doc.addPage();
+    addHeader("Composición vehicular en %", "Seleccione el método de ingreso de datos.");
     
-    const comparisonRows = [
-        [titleActual, formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-        ...structuresAlternatives.map(alt => [
-            alt.title, 
-            formatNum(alt.data.snTotalProvided, 2), 
-            formatNum(alt.data.esalsForSnTotal, 0), 
-            formatNum(alt.data.remainingLifeYears, 1), 
-            alt.data.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'
-        ])
+    // Summary Boxes for vehicles (Grid simulation)
+    const usedVehs = VEHICLE_NAMES.map((name, idx) => ({ name, val: compData[idx] || 0 })).filter(v => v.val > 0);
+    let curY = 45;
+    let curX = margin;
+    const boxWidth = contentWidth / 4 - 3;
+    const boxHeight = 20;
+
+    usedVehs.forEach((v, i) => {
+        if (i > 0 && i % 4 === 0) {
+            curY += boxHeight + 4;
+            curX = margin;
+        }
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(curX, curY, boxWidth, boxHeight, 2, 2, 'FD');
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(v.name, curX + 4, curY + 6);
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.text(formatNum(v.val, 1) + "%", curX + boxWidth - 12, curY + 14, { align: 'right' });
+        curX += boxWidth + 4;
+    });
+
+    // UNAM ANALYSIS
+    curY += boxHeight + 15;
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.text("Análisis UNAM", margin, curY);
+    curY += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Concentrado de cargas y daño unitario", margin, curY);
+    
+    const unamResults = calculateUnamTotalAccumulated(genData, compData, 0); 
+
+    // Summary Boxes
+    curY += 10;
+    const stats = [
+        { label: "SUMA EJES EQUIV. 1er AÑO", val: formatNum(unamResults.totalEquiv1stYear, 0), color: [37, 99, 235] },
+        { label: "COEF. ACUMULACIÓN (CT)", val: formatNum(unamResults.ct, 4), color: [245, 158, 11] },
+        { label: "TOTAL EJES EQUIV. ACUMULADOS", val: formatNum(unamResults.totalAccumulated, 0), color: [16, 185, 129] }
     ];
 
-    autoTable(doc, {
-        startY: 28,
-        head: [['Alternativa', 'SN Total', 'W18 Soportado', 'Vida (Años)', 'Cumple']],
-        body: comparisonRows,
-        theme: 'striped',
-        headStyles: { fillColor: [51, 65, 85] },
-        columnStyles: {
-            4: { fontStyle: 'bold' }
-        }
+    let sx = margin;
+    stats.forEach(s => {
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(s.color[0], s.color[1], s.color[2]);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(sx, curY, contentWidth / 3 - 2, 25, 2, 2, 'FD');
+        doc.setLineWidth(0.1);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(s.label, sx + 4, curY + 7);
+        doc.setFontSize(12);
+        doc.setTextColor(s.color[0], s.color[1], s.color[2]);
+        doc.text(s.val, sx + 4, curY + 18);
+        sx += contentWidth / 3 + 1;
     });
 
-    // Add Charts to PDF if visible
-    const chartSn = document.getElementById('chart-sn');
-    const chartStructural = document.getElementById('chart-structural');
-    
-    currentY = (doc as any).lastAutoTable.finalY + 20;
+    // UNAM Table
+    autoTable(doc, {
+        startY: curY + 32,
+        head: [['NO.', 'TIPO', 'ESTADO', 'W(TON)', 'EJES 1er AÑO', 'DAÑO UNITARIO', 'EJESEQUIV.']],
+        body: unamResults.rows.filter(r => r.equiv > 0).map(r => [
+            r.no, r.tipo, r.estado, formatNum(r.wTon, 1), formatNum(r.ejes, 0), formatNum(r.damage, 5), formatNum(r.equiv, 0)
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [51, 65, 85] }
+    });
 
-    const addChartToPdf = async (element: HTMLElement, title: string) => {
-        try {
-            if (currentY > doc.internal.pageSize.getHeight() - 100) {
-                doc.addPage();
-                currentY = 20;
-            }
+    // ==========================================
+    // PAGE 4: DICTAMEN TÉCNICO SUMMARY
+    // ==========================================
+    doc.addPage();
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 20, pageWidth - margin, 20);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("DICTÁMENES TÉCNICOS DE CONSERVACIÓN PERIÓDICA 2026", pageWidth / 2, 28, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Memoria de Cálculo de Pavimentos (AASHTO 93)", pageWidth / 2, 34, { align: 'center' });
+    doc.line(margin, 38, pageWidth - margin, 38);
 
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(30, 41, 59);
-            doc.text(title, pageWidth / 2, currentY, { align: 'center' });
-            currentY += 12;
+    // Summary Boxes Layout
+    drawCard(45, 35, "INFORMACIÓN DEL CAMINO");
+    autoTable(doc, {
+        startY: 53,
+        margin: { left: margin + 2, right: midX + 2 },
+        body: [
+            ['Carretera:', genData.projectName || '-'],
+            ['Tramo:', genData.section || '-'],
+            ['Clasificación:', genData.roadType || '-'],
+            ['Tipo de Red:', genData.networkType || '-'],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, fontStyle: 'bold' }
+    });
 
-            const canvas = await html2canvas(element, { 
-                scale: 1.5,
-                backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                width: element.offsetWidth,
-                height: element.offsetHeight
-            });
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = pageWidth - 40;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            const xPos = (pageWidth - imgWidth) / 2;
-            
-            doc.addImage(imgData, 'PNG', xPos, currentY, imgWidth, imgHeight);
-            currentY += imgHeight + 20;
-        } catch (err) {
-            console.error(`Error capturing chart ${title}:`, err);
-        }
-    };
+    drawCard(45, 35, ""); // Right card for traffic placeholder
+    doc.text("INFORMACIÓN DE TRÁNSITO", midX + 8, 53);
+    autoTable(doc, {
+        startY: 53,
+        margin: { left: midX + 5, right: margin + 2 },
+        body: [
+            ['TDPA:', formatNum(genData.tdpa, 0) + " Vehículos"],
+            ['% Vehículos Cargados:', formatNum(genData.pvc, 1) + "%"],
+            ['Carriles por sentido:', genData.lanes],
+            ['Periodo de diseño:', genData.designPeriod + " años"],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, fontStyle: 'bold' }
+    });
 
-    if (chartSn) {
-        await addChartToPdf(chartSn, "Cuadro Comparativo de Alternativas (SN)");
-    }
+    // W18 BIG BOX
+    doc.setFillColor(59, 130, 246); // blue-500
+    doc.roundedRect(margin, 85, contentWidth / 3 - 5, 45, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text("ESALS DE DISEÑO TOTALES", margin + 5, 93);
+    doc.setFontSize(18);
+    doc.text(formatNum(totalESALsDesign, 0), margin + 5, 105);
+    doc.setFontSize(8);
+    doc.text("1ER AÑO: " + formatNum(totalESALs1Year, 0), margin + 5, 118);
+    doc.text("FACTOR CREC: " + formatNum(growthFactor, 2), margin + 5, 125);
 
-    if (chartStructural) {
-        await addChartToPdf(chartStructural, "Comparativa de Espesores de Estructura (cm)");
-    }
+    // Breakdown Table in Page 4
+    autoTable(doc, {
+        startY: 85,
+        margin: { left: margin + (contentWidth / 3) },
+        head: [['NO.', 'TIPO', 'ESTADO', 'W(KIPS)', 'FX', 'ESAL 1ER. AÑO']],
+        body: esalRows.filter(r => r.esalAnio > 0).map(r => [
+            r.no, r.tipo, r.estado, formatNum(r.lxKip, 1), formatNum(r.fx, 4), formatNum(r.esalAnio, 0)
+        ]),
+        theme: 'striped',
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [51, 65, 85] }
+    });
 
-    // 5. Structure Alternatives
-    const addStructureToPdf = (title: string, data: any, index: number) => {
-        doc.addPage();
-        doc.setFontSize(16);
-        doc.text(`5.${index} ${title}`, 14, 20);
-        
+    // SN Suggestion
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, 135, contentWidth / 3 - 5, 30, 2, 2, 'FD');
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(8);
+    doc.text("SN (N° ESTRUCTURAL SUGERIDO)", margin + 5, 143);
+    doc.setFontSize(16);
+    doc.text(formatNum(snRequiredTotalManual, 2), margin + 5, 155);
+
+    // ==========================================
+    // PAGE 5: PAV. ACTUAL & ALT 1
+    // ==========================================
+    doc.addPage();
+    const addStructureTableToPdf = (title: string, data: any, startY: number, icon: string) => {
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(margin, startY, contentWidth, 75, 3, 3, 'F');
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text(title, margin + 8, startY + 8);
+
         autoTable(doc, {
-            startY: 25,
-            head: [['Capa', 'a', 'E(psi)', 'Espesor (cm)', 'SN Aportado']],
-            body: [
-                ...data.layers.map((l: any) => [
-                    l.name,
-                    formatNum(l.a, 2),
-                    formatNum(l.mr, 0),
-                    formatNum(l.h_cm_real, 1),
-                    formatNum(l.snProvided, 2)
-                ]),
-                ['Subrasante', '-', formatNum(genData.subgradeMr, 0), '-', '-']
-            ],
-            foot: [[
-                'TOTAL', '', '', '', formatNum(data.snTotalProvided, 2)
-            ]],
-            theme: 'striped',
-            headStyles: { fillColor: [15, 118, 110] }
+            startY: startY + 12,
+            margin: { left: margin + 5, right: margin + 5 },
+            head: [['CAPA', 'A', 'E(PSI)', 'ESPESOR (CM)', 'SN APORTADO']],
+            body: data.layers.map((l: any) => [
+                l.name, formatNum(l.a, 2), formatNum(l.mr, 0), formatNum(l.h_cm_real, 1), formatNum(l.snProvided, 2)
+            ]),
+            theme: 'plain',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105] }
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY;
-        doc.setFontSize(12);
-        doc.text(`ESAL's Soportados (W18): ${formatNum(data.esalsForSnTotal, 0)}`, 14, finalY + 15);
-        doc.text(`Vida Remanente Estimada: ${formatNum(data.remainingLifeYears, 1)} años`, 14, finalY + 25);
+        const finalY = (doc as any).lastAutoTable.finalY + 5;
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`W18 Soportados: ${formatNum(data.esalsForSnTotal, 0)}`, pageWidth - margin - 10, finalY, { align: 'right' });
+        doc.text(`Vida Estimada: ${formatNum(data.remainingLifeYears, 1)} años`, pageWidth - margin - 10, finalY + 5, { align: 'right' });
+        doc.setFontSize(10);
+        doc.setTextColor(16, 185, 129);
+        doc.text(`SN Total: ${formatNum(data.snTotalProvided, 2)}`, pageWidth - margin - 10, finalY - 8, { align: 'right' });
     };
 
-    addStructureToPdf(titleActual, structureActual, 1);
-    structuresAlternatives.forEach((alt, idx) => {
-        addStructureToPdf(alt.title, alt.data, idx + 2);
+    addStructureTableToPdf("Pavimento Actual", structureActual, 20, "road");
+    if (structuresAlternatives.length > 0) {
+        addStructureTableToPdf(structuresAlternatives[0].title, structuresAlternatives[0].data, 105, "plus-circle");
+    }
+
+    // ==========================================
+    // PAGE 6: ALT 2 & ALT 3
+    // ==========================================
+    if (structuresAlternatives.length > 1) {
+        doc.addPage();
+        addStructureTableToPdf(structuresAlternatives[1].title, structuresAlternatives[1].data, 20, "check");
+        if (structuresAlternatives.length > 2) {
+            addStructureTableToPdf(structuresAlternatives[2].title, structuresAlternatives[2].data, 105, "check");
+        }
+    }
+
+    // ==========================================
+    // PAGE 7: COMPARATIVA SN & CHART
+    // ==========================================
+    doc.addPage();
+    drawCard(15, 35, "Cuadro Comparativo de Alternativas");
+    autoTable(doc, {
+        startY: 23,
+        margin: { left: margin + 5, right: margin + 5 },
+        head: [['ALTERNATIVA', 'SN APORTADO', 'W18 SOPORTADOS', 'VIDA (AÑOS)']],
+        body: [
+            [titleActual, formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1)],
+            ...structuresAlternatives.map(alt => [
+                alt.title, formatNum(alt.data.snTotalProvided, 2), formatNum(alt.data.esalsForSnTotal, 0), formatNum(alt.data.remainingLifeYears, 1)
+            ])
+        ],
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [15, 23, 42] }
     });
+
+    const chartSn = document.getElementById('chart-sn');
+    if (chartSn) {
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("Comparativa de SN Aportado vs Requerido", margin, 75);
+        const canvas = await html2canvas(chartSn, { scale: 1.5, backgroundColor: '#ffffff' });
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', margin, 85, imgWidth, imgHeight);
+    }
+
+    // ==========================================
+    // PAGE 8: COMPARATIVA ESPESORES
+    // ==========================================
+    doc.addPage();
+    const chartStructural = document.getElementById('chart-structural');
+    if (chartStructural) {
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text("Comparativa de Espesores de Estructura (cm)", margin, 20);
+        const canvas = await html2canvas(chartStructural, { scale: 1.5, backgroundColor: '#ffffff' });
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', margin, 30, imgWidth, imgHeight);
+    }
 
     const fileName = genData.projectName 
         ? `${genData.projectName.replace(/[/\\?%*:|"<>]/g, '-')}.pdf` 
-        : "Memoria_Diseño_Pavimento.pdf";
+        : "Memoria_AASHTO93.pdf";
     doc.save(fileName);
   };
 
