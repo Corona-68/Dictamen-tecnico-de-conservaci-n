@@ -4,6 +4,7 @@ export interface PavementLayer {
   mr: number; // Modulus (psi)
   a: number;  // Structural Coefficient
   m: number;  // Drainage Coefficient
+  h_cm_existing?: number; // NEW: Existing thickness in cm
   customCode?: string; // For custom user layers (Mobile view abbreviation)
 }
 

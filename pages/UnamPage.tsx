@@ -20,81 +20,15 @@ const UnamPage: React.FC = () => {
         if (savedComp) setCompData(JSON.parse(savedComp));
     }, []);
 
-    const vehicleResults: RowResult[] = useMemo(() => {
-        if (method !== 'vehicles') return [];
-
-        const compObj: Record<string, number> = {};
-        VEHICLE_NAMES.forEach((name, idx) => {
-            compObj[name] = compData[idx] || 0;
-        });
-
-        const getVal = (key: string) => compObj[key] || 0;
-
-        const Pvc = genData.pvc;
-        const TDPA = genData.tdpa;
-        
-        let fcp = 0.5;
-        if (genData.lanes === '2') fcp = 0.45;
-        if (genData.lanes === '3+') fcp = 0.4;
-
-        const TDPAcd = fcp * TDPA;
-        const fvp = 0.0365 * Pvc * TDPAcd;
-        const fvv = 0.0365 * (100 - Pvc) * TDPAcd;
-
-        const formulas = [
-            () => 2 * getVal("A2") * (fvp + fvv),
-            () => (100 - getVal("A2") + getVal("B4")) * fvp,
-            () => (getVal("B2") + getVal("C2") + getVal("T2S1") + getVal("T2S2") + getVal("T2S3") + getVal("T2S2S2")) * fvp,
-            () => (2*getVal("C2R2") + 2*getVal("C3R2") + getVal("C3R3") + getVal("C2R3") + 3*getVal("T2S1R2") + 2*getVal("T2S1R3") + 2*getVal("T2S2R2") + 3*getVal("T3S1R2") + 2*getVal("T3S1R3") + 2*getVal("T3S2R2") + getVal("T3S2R3")) * fvp,
-            () => (getVal("T2S1") + getVal("T3S1")) * fvp,
-            () => (getVal("C2R2") + getVal("C2R3") + getVal("T2S1R2") + getVal("T2S1R3") + getVal("T2S2R2")) * fvp,
-            () => (getVal("B2") + getVal("B36") + getVal("B38") + 2*getVal("B4") + 2*getVal("C2") + getVal("C36") + getVal("C38") + 4*getVal("C2R2") + 3*getVal("C3R2") + 2*getVal("C3R3") + 3*getVal("C2R3") + 3*getVal("T2S1") + 2*getVal("T2S2") + getVal("T3S2") + getVal("T3S3") + 2*getVal("T3S1") + 5*getVal("T2S1R2") + 4*getVal("T2S1R3") + 4*getVal("T2S2R2") + 4*getVal("T3S1R2") + 3*getVal("T3S1R3") + 3*getVal("T3S2R2") + getVal("T3S2R4") + 2*getVal("T3S2R3") + getVal("T3S3S2") + 2*getVal("T2S2S2") + getVal("T3S2S2")) * fvv,
-            () => (getVal("B2") + getVal("B36") + getVal("B38") + getVal("B4")) * fvv,
-            () => (getVal("B36") + getVal("B4") + getVal("C36") + getVal("T3S1R3")) * fvp,
-            () => (getVal("B38") + getVal("C38") + getVal("T3S2") + getVal("T3S3") + getVal("T3S1") + getVal("T3S2S2")) * fvp,
-            () => (getVal("C3R3") + getVal("C2R3") + getVal("T2S1R3") + getVal("T2S2R2") + getVal("T3S1R3") + getVal("T3S2R2") + 3*getVal("T3S2R4") + 2*getVal("T3S2R3") + 2*getVal("T2S2S2") + 2*getVal("T3S2S2")) * fvp,
-            () => (getVal("T2S2") + getVal("T3S2") + getVal("T3S3S2")) * fvp,
-            () => (getVal("C3R2") + getVal("C3R3") + getVal("T3S1R2") + getVal("T3S2R2") + getVal("T3S2R4") + getVal("T3S2R3") + getVal("T3S3S2")) * fvp,
-            () => (getVal("C36") + getVal("C38") + getVal("C3R2") + 2*getVal("C3R3") + getVal("C2R3") + getVal("T2S2") + 2*getVal("T3S2") + getVal("T3S3") + getVal("T3S1") + getVal("T2S1R3") + getVal("T2S2R2") + getVal("T3S1R2") + 2*getVal("T3S1R3") + 2*getVal("T3S2R2") + 4*getVal("T3S2R4") + 3*getVal("T3S2R3") + 2*getVal("T3S3S2") + 2*getVal("T2S2S2") + 3*getVal("T3S2S2")) * fvv,
-            () => getVal("T3S3S2") * fvp,
-            () => (getVal("T3S3") + getVal("T2S3")) * fvp,
-            () => getVal("T3S3S2") * fvv
-        ];
-
-        return TABLE_STATIC_ROWS.map((staticRow, index) => {
-            const calculatedVal = formulas[index] ? formulas[index]() : 0;
-            return {
-                no: staticRow[0],
-                tipo: staticRow[1],
-                estado: staticRow[2],
-                llantas: staticRow[3],
-                etya: staticRow[4],
-                b: staticRow[5],
-                c: staticRow[6],
-                d: staticRow[7],
-                result: calculatedVal
-            };
-        });
-
-    }, [genData, compData, method]);
-
-    const getWton = (row: RowResult) => {
-        switch (genData.roadType) {
-            case 'ET_A': return row.etya;
-            case 'B': return row.b;
-            case 'C': return row.c;
-            case 'D': return row.d;
-            default: return row.etya;
-        }
-    };
-
     const formatNumber = (num: number) => Math.round(num).toLocaleString('en-US');
     const formatDecimal = (num: number) => num.toFixed(5);
 
     // --- ACCUMULATION CALCULATIONS ---
-    const { totalEquiv1stYear, ct, totalAccumulated } = useMemo(() => {
+    const { totalEquiv1stYear, ct, totalAccumulated, rows } = useMemo(() => {
         return calculateUnamTotalAccumulated(genData, compData, zDepth);
     }, [genData, compData, zDepth]);
+
+    const filteredRows = useMemo(() => rows.filter(r => r.equiv > 0), [rows]);
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 pb-24">
@@ -123,13 +57,13 @@ const UnamPage: React.FC = () => {
                     <div className="bg-white px-3 py-1 rounded text-slate-600 border border-slate-200 shadow-sm flex items-center h-10">
                         Clasificación: <strong className="text-slate-900 ml-2">{genData.roadType === 'ET_A' ? 'Tipo A' : `Tipo ${genData.roadType}`}</strong>
                     </div>
-                    <div className="bg-white px-3 py-1 rounded text-slate-600 border border-slate-200 shadow-sm flex flex-col justify-center h-10">
-                        <label className="text-[10px] font-bold uppercase text-slate-400 leading-none mb-1">Profundidad Z (cm)</label>
+                    <div className="bg-white px-3 py-1 rounded text-slate-600 border border-slate-200 shadow-sm flex items-center gap-2 h-10">
+                        <label className="text-[10px] font-bold uppercase text-slate-400 leading-none">Profundidad Z (cm)</label>
                         <input 
                             type="number" 
                             value={zDepth}
                             onChange={(e) => setZDepth(parseFloat(e.target.value) || 0)}
-                            className="bg-transparent border-none outline-none text-slate-900 font-bold w-20 p-0 leading-none"
+                            className="bg-transparent border-none outline-none text-slate-900 font-bold w-12 p-0 leading-none"
                         />
                     </div>
                 </div>
@@ -158,11 +92,7 @@ const UnamPage: React.FC = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {vehicleResults.map((row, index) => {
-                                const wTon = getWton(row);
-                                const damage = calculateUnamDamage(wTon, row.tipo, index, zDepth);
-                                const equiv = row.result * damage;
-                                
+                            {filteredRows.map((row, index) => {
                                 return (
                                     <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm md:border-none md:p-0 md:shadow-none">
                                         {/* Mobile Header */}
@@ -187,25 +117,25 @@ const UnamPage: React.FC = () => {
                                             {/* W(TON) */}
                                             <div className="md:col-span-1">
                                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">W(TON)</label>
-                                                <div className="text-sm font-mono text-right">{wTon.toFixed(1)}</div>
+                                                <div className="text-sm font-mono text-right">{row.wTon.toFixed(1)}</div>
                                             </div>
 
                                             {/* EJES 1er AÑO */}
                                             <div className="md:col-span-2">
                                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">EJES 1er AÑO</label>
-                                                <div className="text-sm font-mono text-right">{formatNumber(row.result)}</div>
+                                                <div className="text-sm font-mono text-right">{formatNumber(row.ejes)}</div>
                                             </div>
 
                                             {/* Daño Unitario */}
                                             <div className="md:col-span-2">
                                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">Daño Unitario</label>
-                                                <div className="text-sm font-mono text-right text-blue-600 font-bold">{formatDecimal(damage)}</div>
+                                                <div className="text-sm font-mono text-right text-blue-600 font-bold">{formatDecimal(row.damage)}</div>
                                             </div>
 
                                             {/* EjesEquiv.1er.año */}
                                             <div className="md:col-span-2">
                                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 text-right">EjesEquiv.1er.año</label>
-                                                <div className="text-sm font-mono text-right text-emerald-600 font-bold">{formatNumber(equiv)}</div>
+                                                <div className="text-sm font-mono text-right text-emerald-600 font-bold">{formatNumber(row.equiv)}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -218,7 +148,7 @@ const UnamPage: React.FC = () => {
                                 <div className="text-center md:text-left">
                                     <div className="text-[10px] font-bold text-slate-400 uppercase">Total Ejes 1er Año</div>
                                     <div className="text-lg font-bold text-slate-900 font-mono">
-                                        {formatNumber(vehicleResults.reduce((sum, r) => sum + r.result, 0))}
+                                        {formatNumber(rows.reduce((sum, r) => sum + r.ejes, 0))}
                                     </div>
                                 </div>
                                 <div className="text-center md:text-right">

@@ -11,9 +11,11 @@ const EsalCalculationPage: React.FC = () => {
 
     useEffect(() => {
         const savedGen = localStorage.getItem('datosGeneralesData');
+        let currentGen = DEFAULT_GENERAL_DATA;
         if (savedGen) {
             try {
-                setGenData({ ...DEFAULT_GENERAL_DATA, ...JSON.parse(savedGen) });
+                currentGen = { ...DEFAULT_GENERAL_DATA, ...JSON.parse(savedGen) };
+                setGenData(currentGen);
             } catch (e) { console.error(e); }
         }
 
@@ -21,6 +23,17 @@ const EsalCalculationPage: React.FC = () => {
         if (savedComp) {
             try {
                 setCompData(JSON.parse(savedComp));
+            } catch (e) { console.error(e); }
+        }
+
+        // Try to load the "equalized" SN from EsalsPage (Structuring)
+        const savedEsals = localStorage.getItem('esalsData');
+        if (savedEsals) {
+            try {
+                const parsed = JSON.parse(savedEsals);
+                if (parsed.snSeed !== undefined) {
+                    setGenData(prev => ({ ...prev, snSeed: parsed.snSeed }));
+                }
             } catch (e) { console.error(e); }
         }
     }, []);
@@ -187,7 +200,7 @@ const EsalCalculationPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-4">
-                                {esalRows.map((row, idx) => (
+                                {esalRows.filter(row => row.esalAnio > 0).map((row, idx) => (
                                     <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm md:border-none md:p-0 md:shadow-none">
                                         {/* Mobile Header */}
                                         <div className="flex justify-between items-center md:hidden mb-4 border-b border-slate-100 pb-2">

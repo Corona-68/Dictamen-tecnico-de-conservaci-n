@@ -103,7 +103,9 @@ const StructureTable = ({
     onAddLayer,
     onRemoveLayer,
     onOpenCalc,
-    onReplicate
+    onClone,
+    onClearAlternatives,
+    mode = 'alternative'
 }: { 
     title: string; 
     onTitleChange?: (newTitle: string) => void;
@@ -116,7 +118,9 @@ const StructureTable = ({
     onAddLayer?: () => void;
     onRemoveLayer?: (id: string) => void;
     onOpenCalc?: (layer: PavementLayer) => void;
-    onReplicate?: () => void;
+    onClone?: () => void;
+    onClearAlternatives?: () => void;
+    mode?: 'actual' | 'alternative';
 }) => {
     const { layers, snTotalProvided, esalsForSnTotal, remainingLifeYears } = data;
 
@@ -128,21 +132,33 @@ const StructureTable = ({
                         type="text"
                         value={title}
                         onChange={(e) => onTitleChange?.(e.target.value)}
-                        className="w-full font-bold text-slate-900 text-lg bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 transition-all"
+                        className={`w-full font-bold text-slate-900 text-lg bg-transparent border-none outline-none focus:ring-2 focus:ring-blue-500 rounded px-1 transition-all ${mode === 'actual' ? 'pointer-events-none' : ''}`}
                         placeholder="Nombre de la estructura"
+                        readOnly={mode === 'actual'}
                     />
                 </div>
                 <div className="flex items-center gap-2">
-                    {onReplicate && (
-                        <button 
-                            onClick={onReplicate}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
-                            title="Replicar esta estructura a las alternativas"
-                        >
-                            <i className="fas fa-copy"></i>
-                            <span className="hidden sm:inline">Replicar a Alternativas</span>
-                            <span className="sm:hidden">Replicar</span>
-                        </button>
+                    {onClone && (
+                        <div className="flex gap-2">
+                             <button 
+                                onClick={onClone}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                                title="Clonar esta estructura para crear una nueva alternativa"
+                            >
+                                <i className="fas fa-copy"></i>
+                                <span>Clonar Pavimento Actual</span>
+                            </button>
+                            {onClearAlternatives && (
+                                <button 
+                                    onClick={onClearAlternatives}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-all border border-red-200"
+                                    title="Eliminar todas las alternativas propuestas"
+                                >
+                                    <i className="fas fa-trash-alt"></i>
+                                    <span>Eliminar Alternativas</span>
+                                </button>
+                            )}
+                        </div>
                     )}
                     {isEditable && (
                         <button 
@@ -162,12 +178,10 @@ const StructureTable = ({
                         <thead className="text-xs text-slate-700 uppercase bg-slate-100">
                             <tr>
                                 <th className="px-4 py-3">Capa</th>
-                                <th className="px-4 py-3 text-center">a</th>
-                                <th className="px-4 py-3 text-center">m</th>
+                                <th className="px-4 py-3 text-center">A</th>
+                                <th className="px-4 py-3 text-center">M</th>
                                 <th className="px-4 py-3 text-right">E(psi)</th>
-                                <th className="px-4 py-3 text-right text-orange-600">SN Req</th>
-                                <th className="px-4 py-3 text-right">Esp. Calc (cm)</th>
-                                <th className="px-4 py-3 text-right font-bold text-slate-900 w-32">Esp. Real (cm)</th>
+                                <th className="px-4 py-3 text-right font-bold text-slate-900 w-32">Espesor (cm)</th>
                                 <th className="px-4 py-3 text-right text-emerald-600">SN Aportado</th>
                                 {isEditable && <th className="px-4 py-3 text-right">Acciones</th>}
                             </tr>
@@ -229,16 +243,18 @@ const StructureTable = ({
                                             />
                                         ) : formatNum(layer.mr, 0)}
                                     </td>
-                                    <td className="px-4 py-3 text-right font-mono text-orange-600">{formatNum(layer.snReq)}</td>
-                                    <td className="px-4 py-3 text-right font-mono">{formatNum(layer.h_cm_calc)}</td>
                                     <td className="px-4 py-3">
-                                        <input
-                                            type="number"
-                                            value={layer.h_cm_real}
-                                            onChange={(e) => handleRealThicknessChange(layer.id, e.target.value)}
-                                            className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-right text-slate-900 font-bold focus:border-blue-500 outline-none"
-                                            onClick={(e) => (e.target as HTMLInputElement).select()}
-                                        />
+                                        {mode === 'actual' ? (
+                                            <div className="text-right font-bold text-slate-900 pr-2">{formatNum(layer.h_cm_real, 1)}</div>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                value={layer.h_cm_real}
+                                                onChange={(e) => handleRealThicknessChange(layer.id, e.target.value)}
+                                                className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-right text-slate-900 font-bold focus:border-blue-500 outline-none"
+                                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                                            />
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono text-emerald-600">{formatNum(layer.snProvided)}</td>
                                     {isEditable && (
@@ -268,7 +284,6 @@ const StructureTable = ({
                                 <td className="px-4 py-3 text-right text-xs text-slate-500 font-normal">
                                     Módulo Resiliente: <span className="text-blue-600 font-mono text-sm font-bold">{formatNum(genData.subgradeMr, 0)} psi</span>
                                 </td>
-                                <td colSpan={2}></td>
                                 <td className="px-4 py-3 text-right text-emerald-600">
                                     SN Total: {formatNum(snTotalProvided)}
                                 </td>
@@ -278,7 +293,7 @@ const StructureTable = ({
                                 <td colSpan={5} className="px-4 py-4 text-right text-slate-500 font-medium">
                                     ESAL's Soportados por la Estructura (W18):
                                 </td>
-                                <td colSpan={3} className="px-4 py-4 text-right text-blue-600 font-mono text-xl">
+                                <td colSpan={1} className="px-4 py-4 text-right text-blue-600 font-mono text-xl">
                                     {formatNum(esalsForSnTotal, 0)}
                                 </td>
                                 {isEditable && <td></td>}
@@ -287,7 +302,7 @@ const StructureTable = ({
                                 <td colSpan={5} className="px-4 py-4 text-right text-slate-500 font-medium">
                                     Vida Remanente Estimada:
                                 </td>
-                                <td colSpan={3} className="px-4 py-4 text-right text-emerald-600 font-mono text-xl">
+                                <td colSpan={1} className="px-4 py-4 text-right text-emerald-600 font-mono text-xl">
                                     {formatNum(remainingLifeYears, 1)} años
                                 </td>
                                 {isEditable && <td></td>}
@@ -338,7 +353,11 @@ const StructureTable = ({
                                         ) : <span className="text-slate-700">{formatNum(layer.mr, 0)}</span>}
                                     </div>
                                     <div className="flex justify-between">
-                                        <span>a:</span>
+                                        <span>Espesor (cm):</span>
+                                        <span className="text-slate-900 font-bold">{formatNum(layer.h_cm_real, 1)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>A:</span>
                                         {isEditable ? (
                                             <input 
                                                 type="number" 
@@ -350,7 +369,7 @@ const StructureTable = ({
                                         ) : <span className="text-slate-700">{formatNum(layer.a, 2)}</span>}
                                     </div>
                                     <div className="flex justify-between">
-                                        <span>m:</span>
+                                        <span>M:</span>
                                         {isEditable ? (
                                             <input 
                                                 type="number" 
@@ -361,25 +380,21 @@ const StructureTable = ({
                                             />
                                         ) : <span className="text-slate-700">{layer.m}</span>}
                                     </div>
-                                    <div className="flex justify-between text-orange-600 font-semibold">
-                                        <span>SN Req:</span>
-                                        <span>{formatNum(layer.snReq)}</span>
-                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-4 pt-2 border-t border-slate-50">
                                     <div className="flex-1">
-                                        <div className="text-[9px] text-slate-400 uppercase">Esp. Calc</div>
-                                        <div className="text-xs font-mono">{formatNum(layer.h_cm_calc)} cm</div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="text-[9px] text-slate-400 uppercase">Esp. Real</div>
-                                        <input
-                                            type="number"
-                                            value={layer.h_cm_real}
-                                            onChange={(e) => handleRealThicknessChange(layer.id, e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded px-1 py-1 text-center text-slate-900 font-bold text-xs"
-                                        />
+                                        <div className="text-[9px] text-slate-400 uppercase">Espesor</div>
+                                        {mode === 'actual' ? (
+                                            <div className="text-xs font-bold text-slate-900">{formatNum(layer.h_cm_real, 1)} cm</div>
+                                        ) : (
+                                            <input
+                                                type="number"
+                                                value={layer.h_cm_real}
+                                                onChange={(e) => handleRealThicknessChange(layer.id, e.target.value)}
+                                                className="w-full bg-slate-50 border border-slate-200 rounded px-1 py-1 text-center text-slate-900 font-bold text-xs"
+                                            />
+                                        )}
                                     </div>
                                     <div className="flex-1 text-right">
                                         <div className="text-[9px] text-slate-400 uppercase">SN Aport.</div>
@@ -417,24 +432,27 @@ const StructureTable = ({
     );
 };
 
+interface PavementAlternative {
+    id: string;
+    title: string;
+    layers: PavementLayer[];
+}
+
 const EsalsPage: React.FC = () => {
   // Inputs for AASHTO Design
   const [snSeed, setSnSeed] = useState<number>(2.0); 
   const [manualThicknesses, setManualThicknesses] = useState<Record<string, number>>({});
-  const [alt1Layers, setAlt1Layers] = useState<PavementLayer[]>([]);
-  const [alt2Layers, setAlt2Layers] = useState<PavementLayer[]>([]);
+  const [alternatives, setAlternatives] = useState<PavementAlternative[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   // -- Custom Titles for Structures --
   const [titleActual, setTitleActual] = useState("PAV. Actual");
-  const [titleAlt1, setTitleAlt1] = useState("Bacheo + CA");
-  const [titleAlt2, setTitleAlt2] = useState("Fresado + CA");
-  const [titleAlt3, setTitleAlt3] = useState("Riego de sello");
 
   // -- Custom Layer Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
-  const [editingAltSource, setEditingAltSource] = useState<1 | 2 | null>(null);
+  const [editingAltId, setEditingAltId] = useState<string | null>(null);
   const [customLayerForm, setCustomLayerForm] = useState({
       code: '',
       name: '',
@@ -446,39 +464,83 @@ const EsalsPage: React.FC = () => {
   // --- Layer Property Calculator State ---
   const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
   const [calcLayerData, setCalcLayerData] = useState<PavementLayer | null>(null);
-  const [calcAltSource, setCalcAltSource] = useState<1 | 2 | null>(null);
+  const [calcAltId, setCalcAltId] = useState<string | null>(null);
 
-  const handleOpenAltCalc = (layer: PavementLayer, alt: 1 | 2) => {
+  const handleOpenAltCalc = (layer: PavementLayer, altId: string) => {
       setCalcLayerData({ ...layer });
-      setCalcAltSource(alt);
+      setCalcAltId(altId);
       setIsCalcModalOpen(true);
   };
 
   const handleApplyAltCalc = () => {
-      if (!calcLayerData || !calcAltSource) return;
-      if (calcAltSource === 1) {
-          setAlt1Layers(prev => prev.map(l => l.id === calcLayerData.id ? calcLayerData : l));
-      } else {
-          setAlt2Layers(prev => prev.map(l => l.id === calcLayerData.id ? calcLayerData : l));
-      }
+      if (!calcLayerData || !calcAltId) return;
+      setAlternatives(prev => prev.map(alt => {
+          if (alt.id !== calcAltId) return alt;
+          return {
+              ...alt,
+              layers: alt.layers.map(l => l.id === calcLayerData.id ? calcLayerData : l)
+          };
+      }));
       setIsCalcModalOpen(false);
   };
 
-  const handleAddAltLayer = (alt: 1 | 2) => {
+  const handleAddAltLayer = (altId: string) => {
       const newLayer: PavementLayer = {
-          id: `alt${alt}_l${Date.now()}`,
+          id: `alt_${altId}_l${Date.now()}`,
           name: "Nueva Capa",
           mr: 30000,
           a: 0.14,
           m: 1.0
       };
-      if (alt === 1) setAlt1Layers(prev => [newLayer, ...prev]);
-      else setAlt2Layers(prev => [newLayer, ...prev]);
+      setAlternatives(prev => prev.map(alt => {
+          if (alt.id !== altId) return alt;
+          return { ...alt, layers: [newLayer, ...alt.layers] };
+      }));
   };
 
-  const handleRemoveAltLayer = (id: string, alt: 1 | 2) => {
-      if (alt === 1) setAlt1Layers(prev => prev.filter(l => l.id !== id));
-      else setAlt2Layers(prev => prev.filter(l => l.id !== id));
+  const handleRemoveAltLayer = (layerId: string, altId: string) => {
+      setAlternatives(prev => prev.map(alt => {
+          if (alt.id !== altId) return alt;
+          return { ...alt, layers: alt.layers.filter(l => l.id !== layerId) };
+      }));
+  };
+
+  const handleClone = (sourceLayers: any[], sourceTitle: string) => {
+      const newAltId = `alt_${Date.now()}`;
+      
+      // We need to map the layers to new IDs to avoid collisions
+      const newLayers = sourceLayers.map((l, idx) => ({
+          id: `${newAltId}_${idx}`,
+          name: l.name,
+          mr: l.mr,
+          a: l.a,
+          m: l.m,
+          h_cm_existing: l.h_cm_existing,
+          customCode: l.customCode
+      }));
+
+      const newManualThicknesses = { ...manualThicknesses };
+      sourceLayers.forEach((l, idx) => {
+          const newId = newLayers[idx].id;
+          // Use the real thickness that was displayed in the source table
+          // This ensures that cloned alternatives match exactly what the user sees
+          newManualThicknesses[newId] = l.h_cm_real;
+      });
+
+      setManualThicknesses(newManualThicknesses);
+      
+      const newAlt: PavementAlternative = {
+          id: newAltId,
+          title: `Alt. ${alternatives.length + 1} (${sourceTitle})`,
+          layers: newLayers
+      };
+
+      setAlternatives(prev => [...prev, newAlt]);
+      
+      // Scroll to bottom after a short delay
+      setTimeout(() => {
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 100);
   };
 
   // Data from previous steps
@@ -514,22 +576,16 @@ const EsalsPage: React.FC = () => {
             const parsed = JSON.parse(savedEsals);
             // Prioritize global SN seed if it was updated in the new ESAL's page
             setSnSeed(currentGen.snSeed !== undefined ? currentGen.snSeed : (parsed.snSeed !== undefined ? parsed.snSeed : 4.0));
-            if (parsed.manualThicknesses) setManualThicknesses(parsed.manualThicknesses);
             
-            // Use saved layers if they exist, otherwise default to genData layers
-            setAlt1Layers(parsed.alt1Layers && parsed.alt1Layers.length > 0 ? parsed.alt1Layers : currentGen.layers);
-            setAlt2Layers(parsed.alt2Layers && parsed.alt2Layers.length > 0 ? parsed.alt2Layers : currentGen.layers);
+            setAlternatives(parsed.alternatives || []);
+            setManualThicknesses(parsed.manualThicknesses || {});
             
             if (parsed.titleActual) setTitleActual(parsed.titleActual);
-            if (parsed.titleAlt1) setTitleAlt1(parsed.titleAlt1);
-            if (parsed.titleAlt2) setTitleAlt2(parsed.titleAlt2);
-            if (parsed.titleAlt3) setTitleAlt3(parsed.titleAlt3);
+            if (parsed.showComparison !== undefined) setShowComparison(parsed.showComparison);
         } catch (e) { console.error(e); }
     } else {
         setSnSeed(currentGen.snSeed || 4.0);
-        // Default to genData.layers for all alternatives as requested
-        setAlt1Layers(currentGen.layers);
-        setAlt2Layers(currentGen.layers);
+        setAlternatives([]);
     }
   }, []);
 
@@ -537,14 +593,22 @@ const EsalsPage: React.FC = () => {
       const dataToSave = { 
           snSeed, 
           manualThicknesses, 
-          alt1Layers, 
-          alt2Layers,
+          alternatives,
           titleActual,
-          titleAlt1,
-          titleAlt2,
-          titleAlt3
+          showComparison
       };
       localStorage.setItem('esalsData', JSON.stringify(dataToSave));
+      
+      // Also update the global snSeed in datosGeneralesData for other pages
+      const savedGen = localStorage.getItem('datosGeneralesData');
+      if (savedGen) {
+          try {
+              const currentGen = JSON.parse(savedGen);
+              currentGen.snSeed = snSeed;
+              localStorage.setItem('datosGeneralesData', JSON.stringify(currentGen));
+          } catch (e) { console.error(e); }
+      }
+
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
   };
@@ -721,7 +785,7 @@ const EsalsPage: React.FC = () => {
   }, [totalESALsDesign, genData, snSeed]);
 
   // --- 5. STRUCTURE CALCULATION HELPER ---
-  const calculateStructure = (layers: PavementLayer[]) => {
+  const calculateStructure = (layers: PavementLayer[], isActual = false) => {
       let accumulatedSN = 0;
       const asphaltLayerNames = ["Carpeta asfáltica alto desempeño", "Carpeta asfáltica normal", "Base asfáltica", "Carpeta asfáltica nueva", "Base asfáltica nueva"];
       
@@ -740,7 +804,12 @@ const EsalsPage: React.FC = () => {
           const h_in_calc = (layer.a * m) > 0 ? snNeededFromLayer / (layer.a * m) : 0;
           const h_cm_calc = h_in_calc * 2.54;
           const manualVal = manualThicknesses[layer.id];
-          const h_cm_real = manualVal !== undefined ? manualVal : Math.ceil(h_cm_calc * 2) / 2;
+          
+          // For actual pavement, we use h_cm_existing. 
+          // For alternatives, we use manualVal or calculated.
+          const h_cm_real = isActual 
+            ? (layer.h_cm_existing || 0)
+            : (manualVal !== undefined ? manualVal : Math.ceil(h_cm_calc * 2) / 2);
 
           const snProvided = (h_cm_real / 2.54) * layer.a * m;
           accumulatedSN += snProvided; 
@@ -787,84 +856,24 @@ const EsalsPage: React.FC = () => {
       return { layers: processedLayers, snTotalProvided, esalsForSnTotal, remainingLifeYears };
   };
 
-  const structureActual = useMemo(() => calculateStructure(genData.layers), [genData.layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
-  const structureAlt1 = useMemo(() => calculateStructure(alt1Layers), [alt1Layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
-  const structureAlt2 = useMemo(() => calculateStructure(alt2Layers), [alt2Layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
-  const structureAlt3 = useMemo(() => calculateStructure([RIEGO_DE_SELLO_LAYER, ...genData.layers]), [genData.layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
+  const structureActual = useMemo(() => calculateStructure(genData.layers, true), [genData.layers, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
+  const structuresAlternatives = useMemo(() => alternatives.map(alt => ({
+      ...alt,
+      data: calculateStructure(alt.layers)
+  })), [alternatives, genData.subgradeMr, genData.drainageCoefficient, totalESALsDesign, manualThicknesses, totalESALs1Year]);
 
-  const handleRealThicknessChange = (layerId: string, val: string, _alt?: number) => {
+  const handleRealThicknessChange = (layerId: string, val: string) => {
     const num = parseFloat(val);
     const newThickness = isNaN(num) ? 0 : num;
 
-    setManualThicknesses(prev => {
-      const next = { ...prev, [layerId]: newThickness };
-
-      // If changing actual structure (no _alt provided), replicate to alternatives by name
-      if (_alt === undefined) {
-        const sourceLayer = genData.layers.find(l => l.id === layerId);
-        if (sourceLayer) {
-          // Replicate to Alt 1 (Bacheo + CA)
-          alt1Layers.forEach(l => {
-            if (l.name === sourceLayer.name) {
-              next[l.id] = newThickness;
-            }
-          });
-          // Replicate to Alt 2 (Fresado + CA)
-          alt2Layers.forEach(l => {
-            if (l.name === sourceLayer.name) {
-              next[l.id] = newThickness;
-            }
-          });
-        }
-      }
-
-      return next;
-    });
+    setManualThicknesses(prev => ({ ...prev, [layerId]: newThickness }));
   };
 
-  const handleReplicateActual = () => {
-    // 1. Copy layers from genData to alt1 and alt2
-    // We'll give them new IDs based on the original ID + alt prefix to avoid collisions
-    const copyLayers = (layers: PavementLayer[], prefix: string) => {
-      return layers.map(l => ({
-        ...l,
-        id: `${prefix}_${l.id}`
-      }));
-    };
-
-    const newAlt1 = copyLayers(genData.layers, 'alt1');
-    const newAlt2 = copyLayers(genData.layers, 'alt2');
-
-    setAlt1Layers(newAlt1);
-    setAlt2Layers(newAlt2);
-
-    // 2. Sync thicknesses
-    setManualThicknesses(prev => {
-      const next = { ...prev };
-      genData.layers.forEach(sourceLayer => {
-        // Get current thickness or calculated one
-        const thickness = prev[sourceLayer.id] !== undefined 
-          ? prev[sourceLayer.id] 
-          : Math.ceil((structureActual.layers.find(l => l.id === sourceLayer.id)?.h_cm_calc || 0) * 2) / 2;
-        
-        // Find corresponding layers in new sets
-        const targetAlt1 = newAlt1.find(l => l.id === `alt1_${sourceLayer.id}`);
-        if (targetAlt1) next[targetAlt1.id] = thickness;
-
-        const targetAlt2 = newAlt2.find(l => l.id === `alt2_${sourceLayer.id}`);
-        if (targetAlt2) next[targetAlt2.id] = thickness;
-      });
-      return next;
-    });
-    
-    alert("Estructura replicada a Bacheo + CA y Fresado + CA");
-  };
-
-  const handleAltLayerChange = (alt: 1 | 2, layerId: string, field: keyof PavementLayer, value: any) => {
+  const handleAltLayerChange = (altId: string, layerId: string, field: keyof PavementLayer, value: any) => {
       // Intercept Name Change for Custom Layer
       if (field === 'name' && value === CUSTOM_LAYER_NAME) {
           setEditingLayerId(layerId);
-          setEditingAltSource(alt);
+          setEditingAltId(altId);
           setCustomLayerForm({
               code: '',
               name: '',
@@ -876,38 +885,48 @@ const EsalsPage: React.FC = () => {
           return;
       }
 
-      const setter = alt === 1 ? setAlt1Layers : setAlt2Layers;
-      setter(prev => prev.map(l => {
-          if (l.id !== layerId) return l;
+      setAlternatives(prev => prev.map(alt => {
+          if (alt.id !== altId) return alt;
+          return {
+              ...alt,
+              layers: alt.layers.map(l => {
+                  if (l.id !== layerId) return l;
 
-          // If changing name to a standard layer, auto-update values
-          if (field === 'name') {
-              const newValues = getLayerValues(value as string, genData.rigidityLevel || 'low');
-              return { 
-                  ...l, 
-                  name: value as string, 
-                  ...newValues,
-                  customCode: undefined 
-              };
-          }
+                  // If changing name to a standard layer, auto-update values
+                  if (field === 'name') {
+                      const newValues = getLayerValues(value as string, genData.rigidityLevel || 'low');
+                      return { 
+                          ...l, 
+                          name: value as string, 
+                          ...newValues,
+                          customCode: undefined 
+                      };
+                  }
 
-          return { ...l, [field]: field === 'a' ? Math.round((parseFloat(value) || 0) * 100) / 100 : (field === 'mr' || field === 'm' ? parseFloat(value) || 0 : value) };
+                  return { ...l, [field]: field === 'a' ? Math.round((parseFloat(value) || 0) * 100) / 100 : (field === 'mr' || field === 'm' ? parseFloat(value) || 0 : value) };
+              })
+          };
       }));
   };
 
   const handleSaveCustomAltLayer = () => {
-      if (!editingLayerId || !editingAltSource) return;
+      if (!editingLayerId || !editingAltId) return;
 
-      const setter = editingAltSource === 1 ? setAlt1Layers : setAlt2Layers;
-      setter(prev => prev.map(l => {
-          if (l.id !== editingLayerId) return l;
+      setAlternatives(prev => prev.map(alt => {
+          if (alt.id !== editingAltId) return alt;
           return {
-              ...l,
-              name: customLayerForm.name || CUSTOM_LAYER_NAME,
-              mr: customLayerForm.mr,
-              a: Math.round(customLayerForm.a * 100) / 100,
-              m: customLayerForm.m,
-              customCode: customLayerForm.code.toUpperCase().substring(0, 2)
+              ...alt,
+              layers: alt.layers.map(l => {
+                  if (l.id !== editingLayerId) return l;
+                  return {
+                      ...l,
+                      name: customLayerForm.name || CUSTOM_LAYER_NAME,
+                      mr: customLayerForm.mr,
+                      a: Math.round(customLayerForm.a * 100) / 100,
+                      m: customLayerForm.m,
+                      customCode: customLayerForm.code.toUpperCase().substring(0, 2)
+                  };
+              })
           };
       }));
       setIsModalOpen(false);
@@ -915,6 +934,32 @@ const EsalsPage: React.FC = () => {
 
   const handleSyncSeed = () => {
     setSnSeed(Number(snRequiredTotalManual.toFixed(2)));
+  };
+
+  const chartData = useMemo(() => [
+    { name: titleActual, sn: structureActual.snTotalProvided },
+    ...structuresAlternatives.map(alt => ({ name: alt.title, sn: alt.data.snTotalProvided }))
+  ], [titleActual, structureActual.snTotalProvided, structuresAlternatives]);
+
+  const structuralChartData = useMemo(() => {
+    return [
+      { 
+        name: titleActual, 
+        ...structureActual.layers.reduce((acc, l, i) => ({ ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name }), {})
+      },
+      ...structuresAlternatives.map(alt => ({
+        name: alt.title,
+        ...alt.data.layers.reduce((acc, l, i) => ({ ...acc, [`layer_${i}`]: l.h_cm_real, [`layer_${i}_name`]: l.name }), {})
+      }))
+    ];
+  }, [titleActual, structureActual.layers, structuresAlternatives]);
+
+  const getLayerColor = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("carpeta") || n.includes("asfáltica")) return "#334155"; 
+    if (n.includes("base") && !n.includes("subbase")) return "#64748b"; 
+    if (n.includes("subbase")) return "#94a3b8"; 
+    return "#cbd5e1"; 
   };
 
   const formatNum = (n: number | undefined, d: number = 2) => (n || 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -1121,15 +1166,21 @@ const EsalsPage: React.FC = () => {
     doc.setTextColor(51, 65, 85);
     doc.text("4. Resumen Comparativo de Alternativas", 14, 20);
     
+    const comparisonRows = [
+        [titleActual, formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
+        ...structuresAlternatives.map(alt => [
+            alt.title, 
+            formatNum(alt.data.snTotalProvided, 2), 
+            formatNum(alt.data.esalsForSnTotal, 0), 
+            formatNum(alt.data.remainingLifeYears, 1), 
+            alt.data.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'
+        ])
+    ];
+
     autoTable(doc, {
         startY: 28,
         head: [['Alternativa', 'SN Total', 'W18 Soportado', 'Vida (Años)', 'Cumple']],
-        body: [
-            [titleActual, formatNum(structureActual.snTotalProvided, 2), formatNum(structureActual.esalsForSnTotal, 0), formatNum(structureActual.remainingLifeYears, 1), structureActual.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            [titleAlt1, formatNum(structureAlt1.snTotalProvided, 2), formatNum(structureAlt1.esalsForSnTotal, 0), formatNum(structureAlt1.remainingLifeYears, 1), structureAlt1.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            [titleAlt2, formatNum(structureAlt2.snTotalProvided, 2), formatNum(structureAlt2.esalsForSnTotal, 0), formatNum(structureAlt2.remainingLifeYears, 1), structureAlt2.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-            [titleAlt3, formatNum(structureAlt3.snTotalProvided, 2), formatNum(structureAlt3.esalsForSnTotal, 0), formatNum(structureAlt3.remainingLifeYears, 1), structureAlt3.snTotalProvided >= snRequiredTotalManual ? 'SI' : 'NO'],
-        ],
+        body: comparisonRows,
         theme: 'striped',
         headStyles: { fillColor: [51, 65, 85] },
         columnStyles: {
@@ -1137,94 +1188,52 @@ const EsalsPage: React.FC = () => {
         }
     });
 
-    // Add Charts to PDF
+    // Add Charts to PDF if visible
     const chartSn = document.getElementById('chart-sn');
-    const chartLayers = document.getElementById('chart-layers');
+    const chartStructural = document.getElementById('chart-structural');
     
     currentY = (doc as any).lastAutoTable.finalY + 20;
 
-    if (chartSn) {
+    const addChartToPdf = async (element: HTMLElement, title: string) => {
         try {
-            // Add Chart Title
+            if (currentY > doc.internal.pageSize.getHeight() - 100) {
+                doc.addPage();
+                currentY = 20;
+            }
+
             doc.setFontSize(16);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(30, 41, 59);
-            doc.text("Cuadro Comparativo de Alternativas (SN)", pageWidth / 2, currentY, { align: 'center' });
+            doc.text(title, pageWidth / 2, currentY, { align: 'center' });
             currentY += 12;
 
-            const canvas = await html2canvas(chartSn, { 
-                scale: 1.5, // Slightly lower scale for better compatibility
+            const canvas = await html2canvas(element, { 
+                scale: 1.5,
                 backgroundColor: '#ffffff',
                 logging: false,
                 useCORS: true,
                 allowTaint: true,
-                width: chartSn.offsetWidth,
-                height: chartSn.offsetHeight
+                width: element.offsetWidth,
+                height: element.offsetHeight
             });
             const imgData = canvas.toDataURL('image/png');
             const imgWidth = pageWidth - 40;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             const xPos = (pageWidth - imgWidth) / 2;
             
-            if (currentY + imgHeight > doc.internal.pageSize.getHeight() - 20) {
-                doc.addPage();
-                currentY = 20;
-                doc.setFontSize(16);
-                doc.setFont("helvetica", "bold");
-                doc.text("Cuadro Comparativo de Alternativas (SN) - Cont.", pageWidth / 2, currentY, { align: 'center' });
-                currentY += 12;
-            }
-            
             doc.addImage(imgData, 'PNG', xPos, currentY, imgWidth, imgHeight);
-            currentY += imgHeight + 25;
+            currentY += imgHeight + 20;
         } catch (err) {
-            console.error("Error capturing SN chart:", err);
-            doc.setFontSize(10);
-            doc.setTextColor(255, 0, 0);
-            doc.text("[Error al generar gráfica SN]", 14, currentY);
-            currentY += 10;
+            console.error(`Error capturing chart ${title}:`, err);
         }
+    };
+
+    if (chartSn) {
+        await addChartToPdf(chartSn, "Cuadro Comparativo de Alternativas (SN)");
     }
 
-    if (chartLayers) {
-        try {
-            // Add Chart Title
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(30, 41, 59);
-            doc.text("Alternativas Estructurales de Pavimento", pageWidth / 2, currentY, { align: 'center' });
-            currentY += 12;
-
-            const canvas = await html2canvas(chartLayers, { 
-                scale: 1.5, // Slightly lower scale for better compatibility
-                backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                width: chartLayers.offsetWidth,
-                height: chartLayers.offsetHeight
-            });
-            const imgData = canvas.toDataURL('image/png');
-            const imgWidth = pageWidth - 40;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            const xPos = (pageWidth - imgWidth) / 2;
-            
-            if (currentY + imgHeight > doc.internal.pageSize.getHeight() - 20) {
-                doc.addPage();
-                currentY = 20;
-                doc.setFontSize(16);
-                doc.setFont("helvetica", "bold");
-                doc.text("Alternativas Estructurales de Pavimento - Cont.", pageWidth / 2, currentY, { align: 'center' });
-                currentY += 12;
-            }
-            
-            doc.addImage(imgData, 'PNG', xPos, currentY, imgWidth, imgHeight);
-        } catch (err) {
-            console.error("Error capturing layers chart:", err);
-            doc.setFontSize(10);
-            doc.setTextColor(255, 0, 0);
-            doc.text("[Error al generar gráfica de capas]", 14, currentY);
-        }
+    if (chartStructural) {
+        await addChartToPdf(chartStructural, "Comparativa de Espesores de Estructura (cm)");
     }
 
     // 5. Structure Alternatives
@@ -1235,7 +1244,7 @@ const EsalsPage: React.FC = () => {
         
         autoTable(doc, {
             startY: 25,
-            head: [['Capa', 'a', 'm', 'E(psi)', 'Esp. Real (cm)', 'SN Aportado']],
+            head: [['Capa', 'a', 'm', 'E(psi)', 'Espesor (cm)', 'SN Aportado']],
             body: [
                 ...data.layers.map((l: any) => [
                     l.name,
@@ -1261,9 +1270,9 @@ const EsalsPage: React.FC = () => {
     };
 
     addStructureToPdf(titleActual, structureActual, 1);
-    addStructureToPdf(titleAlt1, structureAlt1, 2);
-    addStructureToPdf(titleAlt2, structureAlt2, 3);
-    addStructureToPdf(titleAlt3, structureAlt3, 4);
+    structuresAlternatives.forEach((alt, idx) => {
+        addStructureToPdf(alt.title, alt.data, idx + 2);
+    });
 
     const fileName = genData.projectName 
         ? `${genData.projectName.replace(/[/\\?%*:|"<>]/g, '-')}.pdf` 
@@ -1346,344 +1355,287 @@ const EsalsPage: React.FC = () => {
           </div>
       </div>
 
-      {/* Comparative Chart Section */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 mb-12 shadow-sm overflow-hidden">
-          <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <i className="fas fa-chart-bar text-blue-600"></i> Cuadro Comparativo de Alternativas
-          </h3>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Chart */}
-              <div id="chart-sn" className="h-[300px] sm:h-[350px] w-full bg-white p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                          data={[
-                              { name: titleActual, sn: structureActual.snTotalProvided, color: '#94a3b8' },
-                              { name: titleAlt1, sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
-                              { name: titleAlt2, sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
-                              { name: titleAlt3, sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
-                          ]}
-                          margin={{ top: 30, right: 50, left: 20, bottom: 60 }}
-                      >
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                          <XAxis 
-                              dataKey="name" 
-                              axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
-                              tickLine={{ stroke: '#000' }} 
-                              tick={{ fill: '#000', fontSize: 14, fontWeight: '600' }}
-                              interval={0}
-                              padding={{ left: 10, right: 10 }}
-                              dy={12}
-                              label={{ value: 'Alternativas', position: 'insideBottom', offset: -35, style: { fill: '#000', fontSize: 14, fontWeight: 'bold' } }}
-                          />
-                          <YAxis 
-                              axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
-                              tickLine={{ stroke: '#000' }} 
-                              tick={{ fill: '#000', fontSize: 12 }}
-                              width={50}
-                              label={{ value: 'SN Total', angle: -90, position: 'insideLeft', style: { fill: '#000', fontSize: 12, textAnchor: 'middle', fontWeight: 'bold' } }}
-                          />
-                          <Tooltip 
-                              cursor={{ fill: '#f8fafc' }}
-                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          />
-                          <ReferenceLine 
-                              y={snRequiredTotalManual} 
-                              stroke="#ef4444" 
-                              strokeDasharray="5 5" 
-                              label={{ position: 'top', value: `Req: ${formatNum(snRequiredTotalManual, 2)}`, fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} 
-                          />
-                          <Bar dataKey="sn" radius={[4, 4, 0, 0]} barSize={45} isAnimationActive={false}>
-                              {
-                                [
-                                    { name: titleActual, sn: structureActual.snTotalProvided, color: '#94a3b8' },
-                                    { name: titleAlt1, sn: structureAlt1.snTotalProvided, color: '#0ea5e9' },
-                                    { name: titleAlt2, sn: structureAlt2.snTotalProvided, color: '#8b5cf6' },
-                                    { name: titleAlt3, sn: structureAlt3.snTotalProvided, color: '#f59e0b' },
-                                ].map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} stroke="#000" strokeWidth={1} />
-                                ))
-                              }
-                          </Bar>
-                      </BarChart>
-                  </ResponsiveContainer>
+      {/* 3. Estructuración de Capas */}
+      <div id="estructuracion" className="space-y-8 mt-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Estructuración de Capas</h2>
+                  <p className="text-slate-500">Propuesta de espesores para cumplir con el SN Requerido</p>
               </div>
-
-              {/* Summary Table */}
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                  <div className="inline-block min-w-full align-middle">
-                      <table className="min-w-full text-sm text-left">
-                          <thead className="text-[10px] sm:text-xs text-slate-400 uppercase bg-slate-50">
-                              <tr>
-                                  <th className="px-4 py-3">Alternativa</th>
-                                  <th className="px-4 py-3 text-right">SN Total</th>
-                                  <th className="px-4 py-3 text-right">W18 Soportado</th>
-                                  <th className="px-4 py-3 text-right">Vida (Años)</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                              {[
-                                  { name: titleActual, data: structureActual, color: 'bg-slate-400' },
-                                  { name: titleAlt1, data: structureAlt1, color: 'bg-sky-500' },
-                                  { name: titleAlt2, data: structureAlt2, color: 'bg-violet-500' },
-                                  { name: titleAlt3, data: structureAlt3, color: 'bg-amber-500' },
-                              ].map((alt, idx) => (
-                                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                      <td className="px-4 py-3 font-medium text-slate-700 flex items-center gap-2">
-                                          <span className={`w-2 h-2 rounded-full shrink-0 ${alt.color}`}></span>
-                                          <span className="truncate">{alt.name}</span>
-                                      </td>
-                                      <td className="px-4 py-3 text-right font-mono text-slate-600">
-                                          {formatNum(alt.data.snTotalProvided, 2)}
-                                      </td>
-                                      <td className="px-4 py-3 text-right font-mono text-slate-600">
-                                          {formatNum(alt.data.esalsForSnTotal, 0)}
-                                      </td>
-                                      <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
-                                          {formatNum(alt.data.remainingLifeYears, 1)}
-                                      </td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg text-[11px] text-blue-700 leading-relaxed">
-                      <i className="fas fa-info-circle mr-1"></i>
-                      El <strong>SN Requerido</strong> para el diseño es de <strong>{formatNum(snRequiredTotalManual, 2)}</strong>. 
-                      Las alternativas que superen este valor cumplen con la vida de diseño proyectada ({genData.designPeriod} años).
-                  </div>
-              </div>
-          </div>
-
-      {/* Structural Comparison Chart (Stacked Layers) */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 mb-12 shadow-sm overflow-hidden">
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-700 mb-8 text-center">
-              Alternativas estructurales de pavimento
-          </h3>
-          
-          <div id="chart-layers" className="h-[450px] w-full bg-white p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                      data={(() => {
-                          const structures = [
-                              { name: titleActual, data: structureActual, borderColor: '#000' },
-                              { name: titleAlt1, data: structureAlt1, borderColor: '#000' },
-                              { name: titleAlt2, data: structureAlt2, borderColor: '#000' },
-                              { name: titleAlt3, data: structureAlt3, borderColor: '#000' },
-                          ];
-
-                          const getLayerColor = (name: string) => {
-                              const n = name.toLowerCase();
-                              if (n.includes('subrasante')) return '#f0b084';
-                              if (n.includes('base hidráulica') || n.includes('base hidraulica')) return '#8da9d4';
-                              if (n.includes('recuperación') || n.includes('recuperacion') || n.includes('base estabilizada') || n.includes('base asfáltica') || n.includes('base asfaltica')) return '#a349a4';
-                              if (n.includes('base emulsión') || n.includes('base emulsion')) return '#3d3d3d';
-                              if (n.includes('carpeta') || n.includes('asfáltica') || n.includes('asfaltica')) return '#3d3d3d';
-                              if (n.includes('rodadura') || n.includes('sello')) return '#7d3c11';
-                              return '#cbd5e1';
-                          };
-
-                          return structures.map(s => {
-                              const obj: any = { name: s.name, borderColor: s.borderColor };
-                              let vizLayers: { name: string; h: number; color: string }[] = [];
-                              
-                              const layers = s.data.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reverse();
-                              
-                              layers.forEach((l, idx) => {
-                                  let h = l.h_cm_real;
-                                  if (s.name === 'Riego de sello' && (l.name.toLowerCase().includes('rodadura') || l.name.toLowerCase().includes('sello'))) {
-                                      h = 2;
-                                  }
-                                  
-                                  let color = getLayerColor(l.name);
-                                  if (s.name !== 'Actual' && idx === layers.length - 1) {
-                                      color = '#7d3c11';
-                                  }
-                                  
-                                  vizLayers.push({ name: l.name, h: h, color: color });
-                              });
-
-                              vizLayers.forEach((l, i) => {
-                                  obj[`l${i}`] = l.h;
-                                  obj[`l${i}Name`] = l.name;
-                                  obj[`l${i}Color`] = l.color;
-                              });
-                              return obj;
-                          });
-                      })()}
-                      margin={{ top: 40, right: 30, left: 10, bottom: 60 }}
-                      barCategoryGap="35%"
+              <div className="flex items-center gap-3">
+                  <button 
+                      onClick={handleSyncSeed}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95"
                   >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                          dataKey="name" 
-                          axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
-                          tickLine={{ stroke: '#000' }} 
-                          tick={{ fill: '#000', fontSize: 16, fontWeight: '500' }}
-                          interval={0}
-                          dy={12}
-                      />
-                      <YAxis 
-                          axisLine={{ stroke: '#000', strokeWidth: 1.5 }} 
-                          tickLine={{ stroke: '#000' }} 
-                          tick={{ fill: '#000', fontSize: 14 }}
-                          width={45}
-                          domain={[0, 40]}
-                          ticks={[0, 5, 10, 15, 20, 25, 30, 35, 40]}
-                           label={{ value: 'Espesor (cm)', angle: -90, position: 'insideLeft', style: { fill: '#000', fontSize: 12, textAnchor: 'middle', fontWeight: 'bold' } }}
-                      />
-                      <Tooltip 
-                          cursor={{ fill: '#f8fafc', opacity: 0.4 }}
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          formatter={(value: any, name: string, props: any) => {
-                              if (!props || !props.payload) return [`${value} cm`, name];
-                              const layerName = props.payload[`${props.dataKey}Name`] || name;
-                              return [`${value} cm`, layerName];
-                          }}
-                      />
-
-                      <ReferenceLine 
-                          y={structureActual.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reduce((acc, l) => acc + (l.h_cm_real || 0), 0)} 
-                          stroke="#64748b" 
-                          strokeDasharray="5 5" 
-                          strokeWidth={1.5}
-                          label={{ 
-                              value: 'Rasante actual', 
-                              position: 'top', 
-                              fill: '#000', 
-                              fontSize: 12, 
-                              fontWeight: 'bold',
-                              offset: 15
-                          }} 
-                      />
-                      
-                      {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
-                          <Bar 
-                              key={i} 
-                              dataKey={`l${i}`} 
-                              stackId="a" 
-                              isAnimationActive={false}
-                          >
-                              {(() => {
-                                  const structures = [
-                                      { name: 'Actual', data: structureActual, borderColor: '#000' },
-                                      { name: 'REC+CA', data: structureAlt1, borderColor: '#000' },
-                                      { name: 'Fresado+CA', data: structureAlt2, borderColor: '#000' },
-                                      { name: 'Riego sello', data: structureAlt3, borderColor: '#000' },
-                                  ];
-                                  
-                                  const getLayerColor = (name: string) => {
-                                      const n = name.toLowerCase();
-                                      if (n.includes('subrasante')) return '#f0b084';
-                                      if (n.includes('base hidráulica') || n.includes('base hidraulica')) return '#8da9d4';
-                                      if (n.includes('recuperación') || n.includes('recuperacion') || n.includes('base estabilizada') || n.includes('base asfáltica') || n.includes('base asfaltica')) return '#a349a4';
-                                      if (n.includes('base emulsión') || n.includes('base emulsion')) return '#3d3d3d';
-                                      if (n.includes('carpeta') || n.includes('asfáltica') || n.includes('asfaltica')) return '#3d3d3d';
-                                      if (n.includes('rodadura') || n.includes('sello')) return '#7d3c11';
-                                      return '#cbd5e1';
-                                  };
-
-                                  return structures.map((s, idx) => {
-                                      let vizLayers: { name: string; color: string }[] = [];
-                                      const layers = s.data.layers.filter(l => l.name.toLowerCase() !== 'subrasante').reverse();
-                                      layers.forEach((l, lIdx) => {
-                                          let color = getLayerColor(l.name);
-                                          if (s.name !== 'Actual' && lIdx === layers.length - 1) {
-                                              color = '#7d3c11';
-                                          }
-                                          vizLayers.push({ name: l.name, color: color });
-                                      });
-                                      
-                                      const color = vizLayers[i]?.color || '#cbd5e1';
-                                      // Apply border color from alternative
-                                      return <Cell key={idx} fill={color} stroke="#000" strokeWidth={1} />;
-                                  });
-                              })()}
-                          </Bar>
-                      ))}
-                      
-                      <Legend 
-                          verticalAlign="bottom" 
-                          height={40}
-                          content={() => (
-                              <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 mt-6">
-                                  <div className="flex items-center gap-2">
-                                      <div className="w-4 h-4 border border-black bg-[#8da9d4]"></div>
-                                      <span className="text-sm text-slate-700">Base hidráulica</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                      <div className="w-4 h-4 border border-black bg-[#a349a4]"></div>
-                                      <span className="text-sm text-slate-700">Base estabilizada</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                      <div className="w-4 h-4 border border-black bg-[#3d3d3d]"></div>
-                                      <span className="text-sm text-slate-700">Carpeta CA</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                      <div className="w-4 h-4 border border-black bg-[#7d3c11]"></div>
-                                      <span className="text-sm text-slate-700">Capa de rodadura</span>
-                                  </div>
-                              </div>
-                          )}
-                      />
-                  </BarChart>
-              </ResponsiveContainer>
+                      <i className="fas fa-sync-alt"></i>
+                      <span>Igualar SN Semilla con SN Req.</span>
+                  </button>
+              </div>
           </div>
-      </div>
 
-      {/* Layer Structure Tables */}
-      <div className="space-y-12">
-          {/* 1. Estructura Actual */}
-          <StructureTable 
-            title={titleActual} 
-            onTitleChange={setTitleActual}
-            data={structureActual} 
-            genData={genData} 
-            handleRealThicknessChange={handleRealThicknessChange}
-            formatNum={formatNum}
-            onReplicate={handleReplicateActual}
-          />
+          {/* Actual Pavement Structure */}
+          <div className="space-y-4">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-lg">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                      <i className="fas fa-road"></i>
+                  </div>
+                  <h3>Pavimento Actual</h3>
+              </div>
+              <StructureTable 
+                  title={titleActual}
+                  onTitleChange={setTitleActual}
+                  data={structureActual}
+                  genData={genData}
+                  handleRealThicknessChange={handleRealThicknessChange}
+                  formatNum={formatNum}
+                  mode="actual"
+                  onClone={() => handleClone(structureActual.layers, titleActual)}
+                  onClearAlternatives={() => {
+                      if (window.confirm("¿Está seguro de que desea eliminar todas las alternativas de estructuración?")) {
+                          setAlternatives([]);
+                          // Limpiar manualThicknesses que no pertenecen al pavimento actual
+                          const actualLayerIds = new Set(genData.layers.map(l => l.id));
+                          setManualThicknesses(prev => {
+                              const next: Record<string, number> = {};
+                              Object.keys(prev).forEach(key => {
+                                  if (actualLayerIds.has(key)) {
+                                      next[key] = prev[key];
+                                  }
+                              });
+                              return next;
+                          });
+                      }
+                  }}
+              />
+          </div>
 
-          {/* 2. Alternativa 1: Recuperación + CA */}
-          <StructureTable 
-            title={titleAlt1} 
-            onTitleChange={setTitleAlt1}
-            data={structureAlt1} 
-            genData={genData} 
-            handleRealThicknessChange={(id, val) => handleRealThicknessChange(id, val, 1)}
-            formatNum={formatNum}
-            isEditable={true}
-            onLayerChange={(id, field, val) => handleAltLayerChange(1, id, field, val)}
-            onAddLayer={() => handleAddAltLayer(1)}
-            onRemoveLayer={(id) => handleRemoveAltLayer(id, 1)}
-            onOpenCalc={(layer) => handleOpenAltCalc(layer, 1)}
-          />
+          {/* Dynamic Alternatives */}
+          {structuresAlternatives.map((alt, index) => (
+              <div key={alt.id} className="space-y-4 pt-8 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold text-lg">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                              <span className="text-xs">{index + 1}</span>
+                          </div>
+                          <h3>Alternativa {index + 1}</h3>
+                      </div>
+                      <button 
+                          onClick={() => setAlternatives(prev => prev.filter(a => a.id !== alt.id))}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1 px-3 py-1 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                          <i className="fas fa-trash-alt"></i>
+                          <span>Eliminar</span>
+                      </button>
+                  </div>
+                  <StructureTable 
+                      title={alt.title}
+                      onTitleChange={(newTitle) => setAlternatives(prev => prev.map(a => a.id === alt.id ? { ...a, title: newTitle } : a))}
+                      data={alt.data}
+                      genData={genData}
+                      handleRealThicknessChange={handleRealThicknessChange}
+                      formatNum={formatNum}
+                      isEditable={true}
+                      mode="alternative"
+                      onLayerChange={(layerId, field, val) => handleAltLayerChange(alt.id, layerId, field, val)}
+                      onAddLayer={() => handleAddAltLayer(alt.id)}
+                      onRemoveLayer={(layerId) => handleRemoveAltLayer(layerId, alt.id)}
+                      onOpenCalc={(layer) => handleOpenAltCalc(layer, alt.id)}
+                      onClone={() => handleClone(alt.data.layers, alt.title)}
+                  />
+              </div>
+          ))}
 
-          {/* 3. Alternativa 2: Fresado + CA */}
-          <StructureTable 
-            title={titleAlt2} 
-            onTitleChange={setTitleAlt2}
-            data={structureAlt2} 
-            genData={genData} 
-            handleRealThicknessChange={(id, val) => handleRealThicknessChange(id, val, 2)}
-            formatNum={formatNum}
-            isEditable={true}
-            onLayerChange={(id, field, val) => handleAltLayerChange(2, id, field, val)}
-            onAddLayer={() => handleAddAltLayer(2)}
-            onRemoveLayer={(id) => handleRemoveAltLayer(id, 2)}
-            onOpenCalc={(layer) => handleOpenAltCalc(layer, 2)}
-          />
+          {/* Comparison Table Toggle */}
+          <div className="pt-12 flex flex-col items-center gap-8">
+              <button 
+                  onClick={() => setShowComparison(!showComparison)}
+                  className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl hover:shadow-2xl active:scale-95 ${showComparison ? 'bg-slate-800 text-white' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+              >
+                  <i className={`fas ${showComparison ? 'fa-eye-slash' : 'fa-balance-scale'}`}></i>
+                  <span>{showComparison ? 'Ocultar Comparativa' : 'Generar Cuadro Comparativo'}</span>
+              </button>
 
-          {/* 4. Alternativa 3: Riego de sello */}
-          <StructureTable 
-            title={titleAlt3} 
-            onTitleChange={setTitleAlt3}
-            data={structureAlt3} 
-            genData={genData} 
-            handleRealThicknessChange={handleRealThicknessChange}
-            formatNum={formatNum}
-          />
+              {showComparison && (
+                  <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xl">
+                          <div className="p-6 bg-slate-900 text-white">
+                              <h3 className="text-xl font-bold flex items-center gap-3">
+                                  <i className="fas fa-table text-emerald-400"></i>
+                                  Cuadro Comparativo de Alternativas
+                              </h3>
+                          </div>
+                          <div className="overflow-x-auto">
+                              <table className="w-full text-sm text-left">
+                                  <thead className="bg-slate-50 text-slate-700 uppercase text-xs font-bold border-b border-slate-200">
+                                      <tr>
+                                          <th className="px-6 py-4">Alternativa</th>
+                                          <th className="px-6 py-4 text-center">SN Aportado</th>
+                                          <th className="px-6 py-4 text-right">W18 Soportados</th>
+                                          <th className="px-6 py-4 text-right">Vida (Años)</th>
+                                          <th className="px-6 py-4">Capas Principales</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                      <tr className="hover:bg-slate-50 transition-colors">
+                                          <td className="px-6 py-4 font-bold text-slate-900">{titleActual}</td>
+                                          <td className="px-6 py-4 text-center font-mono">{formatNum(structureActual.snTotalProvided)}</td>
+                                          <td className="px-6 py-4 text-right font-mono text-blue-600 font-bold">{formatNum(structureActual.esalsForSnTotal, 0)}</td>
+                                          <td className="px-6 py-4 text-right font-mono text-emerald-600 font-bold">{formatNum(structureActual.remainingLifeYears, 1)}</td>
+                                          <td className="px-6 py-4 text-slate-500 italic text-xs">
+                                              {structureActual.layers.map(l => l.name).join(', ')}
+                                          </td>
+                                      </tr>
+                                      {structuresAlternatives.map((alt) => (
+                                          <tr key={alt.id} className="hover:bg-slate-50 transition-colors">
+                                              <td className="px-6 py-4 font-bold text-slate-900">{alt.title}</td>
+                                              <td className="px-6 py-4 text-center font-mono">{formatNum(alt.data.snTotalProvided)}</td>
+                                              <td className="px-6 py-4 text-right font-mono text-blue-600 font-bold">{formatNum(alt.data.esalsForSnTotal, 0)}</td>
+                                              <td className="px-6 py-4 text-right font-mono text-emerald-600 font-bold">{formatNum(alt.data.remainingLifeYears, 1)}</td>
+                                              <td className="px-6 py-4 text-slate-500 italic text-xs">
+                                                  {alt.data.layers.map(l => l.name).join(', ')}
+                                              </td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      </div>
+
+                      {/* SN Comparison Chart */}
+                      <div className="mt-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-xl" id="chart-sn">
+                          <h4 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                              <i className="fas fa-chart-bar text-blue-600"></i>
+                              Comparativa de SN Aportado vs Requerido
+                          </h4>
+                          <div className="h-[400px] w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <BarChart
+                                      data={chartData}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                                  >
+                                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                      <XAxis 
+                                          dataKey="name" 
+                                          angle={-45} 
+                                          textAnchor="end" 
+                                          height={80} 
+                                          interval={0}
+                                          tick={{ fontSize: 11, fontWeight: 500, fill: '#64748b' }}
+                                      />
+                                      <YAxis 
+                                          label={{ value: 'SN Aportado', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                                          tick={{ fontSize: 11, fill: '#64748b' }}
+                                      />
+                                      <Tooltip 
+                                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                          cursor={{ fill: '#f8fafc' }}
+                                      />
+                                      <Legend verticalAlign="top" height={36} />
+                                      <ReferenceLine 
+                                          y={snRequiredTotalManual} 
+                                          stroke="#ef4444" 
+                                          strokeDasharray="5 5" 
+                                          label={{ position: 'right', value: `SN Req: ${formatNum(snRequiredTotalManual)}`, fill: '#ef4444', fontSize: 10, fontWeight: 'bold' }} 
+                                      />
+                                      <Bar dataKey="sn" name="SN Aportado" radius={[6, 6, 0, 0]} barSize={40}>
+                                          {chartData.map((entry, index) => (
+                                              <Cell 
+                                                  key={`cell-${index}`} 
+                                                  fill={entry.sn >= snRequiredTotalManual ? '#10b981' : '#f59e0b'} 
+                                              />
+                                          ))}
+                                          <LabelList 
+                                              dataKey="sn" 
+                                              position="top" 
+                                              formatter={(val: number) => formatNum(val)}
+                                              style={{ fontSize: 10, fontWeight: 'bold', fill: '#475569' }}
+                                          />
+                                      </Bar>
+                                  </BarChart>
+                              </ResponsiveContainer>
+                          </div>
+                          <div className="mt-4 flex justify-center gap-6 text-xs">
+                              <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                                  <span className="text-slate-600 font-medium">Cumple (SN ≥ SN Req)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded bg-amber-500"></div>
+                                  <span className="text-slate-600 font-medium">No Cumple (SN &lt; SN Req)</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <div className="w-3 h-0.5 bg-red-500 border-t border-dashed border-red-500"></div>
+                                  <span className="text-slate-600 font-medium">SN Requerido</span>
+                              </div>
+                          </div>
+
+                          {/* Structural Comparison Chart */}
+                          <div className="mt-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-xl" id="chart-structural">
+                              <h4 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                  <i className="fas fa-layer-group text-emerald-600"></i>
+                                  Comparativa de Espesores de Estructura (cm)
+                              </h4>
+                              <div className="h-[400px] w-full">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                      <BarChart
+                                          data={structuralChartData}
+                                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                                      >
+                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                          <XAxis 
+                                              dataKey="name" 
+                                              angle={-45} 
+                                              textAnchor="end" 
+                                              height={80} 
+                                              interval={0}
+                                              tick={{ fontSize: 11, fontWeight: 500, fill: '#64748b' }}
+                                          />
+                                          <YAxis 
+                                              label={{ value: 'Espesor Total (cm)', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                                              tick={{ fontSize: 11, fill: '#64748b' }}
+                                          />
+                                          <Tooltip 
+                                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                              formatter={(value: number, name: string, props: any) => {
+                                                  const layerName = props.payload[`${name}_name`];
+                                                  return [`${value} cm`, layerName || name];
+                                              }}
+                                          />
+                                          {/* We need to render Bars for each possible layer index */}
+                                          {/* Assuming max 10 layers for safety */}
+                                          {[...Array(10)].map((_, i) => (
+                                              <Bar 
+                                                  key={`layer_${i}`}
+                                                  dataKey={`layer_${i}`} 
+                                                  stackId="a" 
+                                                  fill={getLayerColor(structuralChartData[0]?.[`layer_${i}_name`] || '')}
+                                              >
+                                                  <LabelList 
+                                                      dataKey={`layer_${i}`} 
+                                                      position="center" 
+                                                      content={(props: any) => {
+                                                          const { x, y, width, height, value } = props;
+                                                          if (height < 15) return null;
+                                                          return (
+                                                              <text x={x + width / 2} y={y + height / 2} fill="#fff" textAnchor="middle" dominantBaseline="middle" fontSize={10} fontWeight="bold">
+                                                                  {value}
+                                                              </text>
+                                                          );
+                                                      }}
+                                                  />
+                                              </Bar>
+                                          ))}
+                                      </BarChart>
+                                  </ResponsiveContainer>
+                              </div>
+                              <div className="mt-4 text-center text-[10px] text-slate-400 italic">
+                                  * Los espesores se muestran en centímetros (cm) y están apilados por capa.
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+          </div>
       </div>
 
       {/* Actions */}

@@ -32,7 +32,8 @@ const GeneralDataPage: React.FC = () => {
       name: '',
       mr: 0,
       a: 0,
-      m: 1.0
+      m: 1.0,
+      h_cm_existing: 0
   });
 
   // -- FWD Calculator Modal State --
@@ -181,7 +182,8 @@ const GeneralDataPage: React.FC = () => {
         name: defaultType,
         mr: values.mr,
         a: values.a,
-        m: values.m || 1.0
+        m: values.m || 1.0,
+        h_cm_existing: 0
     };
 
     setFormData(prev => ({
@@ -200,7 +202,8 @@ const GeneralDataPage: React.FC = () => {
             name: '',
             mr: 0,
             a: 0,
-            m: 1.0
+            m: 1.0,
+            h_cm_existing: 0
         });
         setIsModalOpen(true);
         return; // Don't update state yet, wait for modal
@@ -242,6 +245,7 @@ const GeneralDataPage: React.FC = () => {
                   mr: customLayerForm.mr,
                   a: customLayerForm.a,
                   m: customLayerForm.m,
+                  h_cm_existing: customLayerForm.h_cm_existing,
                   customCode: customLayerForm.code.toUpperCase().substring(0, 2) // Force 2 chars upper
               };
           })
@@ -1118,10 +1122,11 @@ const GeneralDataPage: React.FC = () => {
                 <div className="hidden md:flex justify-between items-center mb-2">
                     <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 flex-grow">
                         <div className="col-span-1 text-center">#</div>
-                        <div className="col-span-4">Capa</div>
-                        <div className="col-span-3">Módulo (psi)</div>
+                        <div className="col-span-3">Capa</div>
+                        <div className="col-span-2">Módulo (psi)</div>
                         <div className="col-span-2 text-center">Aporte (a)</div>
                         <div className="col-span-2 text-center">Drenaje (m)</div>
+                        <div className="col-span-2 text-center">Espesor Existente (cm)</div>
                     </div>
                     <div className="w-8"></div>
                 </div>
@@ -1161,7 +1166,7 @@ const GeneralDataPage: React.FC = () => {
                             </div>
 
                             {/* Name/Select */}
-                            <div className="md:col-span-4">
+                            <div className="md:col-span-3">
                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo de Capa</label>
                                 <select
                                     value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name}
@@ -1178,7 +1183,7 @@ const GeneralDataPage: React.FC = () => {
                             </div>
 
                             {/* Module */}
-                            <div className="md:col-span-3">
+                            <div className="md:col-span-2">
                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Módulo Resiliente (psi)</label>
                                 <input 
                                     type="text" 
@@ -1208,7 +1213,7 @@ const GeneralDataPage: React.FC = () => {
                             </div>
 
                             {/* Coef M */}
-                            <div className="md:col-span-1">
+                            <div className="md:col-span-2">
                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Drenaje (m)</label>
                                 <input 
                                     type="number" 
@@ -1217,6 +1222,18 @@ const GeneralDataPage: React.FC = () => {
                                     onChange={(e) => handleLayerChange(layer.id, 'm', parseFloat(e.target.value))}
                                     className={`${InputClass} py-2 text-sm text-center font-mono`}
                                     disabled={!!layer.customCode}
+                                />
+                            </div>
+
+                            {/* Espesor Real */}
+                            <div className="md:col-span-2">
+                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Espesor Existente (cm)</label>
+                                <input 
+                                    type="number" 
+                                    value={layer.h_cm_existing || 0}
+                                    step="0.1"
+                                    onChange={(e) => handleLayerChange(layer.id, 'h_cm_existing', parseFloat(e.target.value))}
+                                    className={`${InputClass} py-2 text-sm text-center font-mono bg-amber-50 border-amber-200 focus:border-amber-500 focus:ring-amber-500`}
                                 />
                             </div>
 
@@ -1434,6 +1451,16 @@ const GeneralDataPage: React.FC = () => {
                                 step="0.01"
                                 value={customLayerForm.m || ''}
                                 onChange={(e) => setCustomLayerForm(prev => ({ ...prev, m: parseFloat(e.target.value) }))}
+                                className={InputClass}
+                            />
+                        </div>
+                        <div>
+                            <label className={LabelClass}>Espesor Existente (cm)</label>
+                            <input 
+                                type="number" 
+                                step="0.1"
+                                value={customLayerForm.h_cm_existing || ''}
+                                onChange={(e) => setCustomLayerForm(prev => ({ ...prev, h_cm_existing: parseFloat(e.target.value) }))}
                                 className={InputClass}
                             />
                         </div>

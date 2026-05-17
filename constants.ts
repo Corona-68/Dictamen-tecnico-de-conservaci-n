@@ -39,7 +39,7 @@ export const DEFAULT_GENERAL_DATA: GeneralData = {
     rigidityLevel: 'low',
     drainageCoefficient: 0.9,
     layers: [
-        { id: 'l_init_1', name: "Carpeta asfáltica normal", mr: 361234, a: 0.400, m: 1.0 }
+        { id: 'l_init_1', name: "Carpeta asfáltica normal", mr: 361234, a: 0.400, m: 1.0, h_cm_existing: 0 }
     ]
 };
 
@@ -48,57 +48,57 @@ export const LAYER_CATALOG = [
     { 
         name: "Carpeta asfáltica alto desempeño", 
         values: {
-            low: { mr: 725790, a: 0.524, m: 1.0 },
-            medium: { mr: 768452, a: 0.534, m: 1.0 },
-            high: { mr: 811114, a: 0.543, m: 1.0 }
+            low: { mr: 725790, a: 0.524, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 768452, a: 0.534, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 811114, a: 0.543, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Carpeta asfáltica normal", 
         values: {
-            low: { mr: 361234, a: 0.400, m: 1.0 },
-            medium: { mr: 402713, a: 0.420, m: 1.0 },
-            high: { mr: 448953, a: 0.440, m: 1.0 }
+            low: { mr: 361234, a: 0.400, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 402713, a: 0.420, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 448953, a: 0.440, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Base asfáltica", 
         values: {
-            low: { mr: 256745, a: 0.254, m: 1.0 },
-            medium: { mr: 326164, a: 0.278, m: 1.0 },
-            high: { mr: 395583, a: 0.302, m: 1.0 }
+            low: { mr: 256745, a: 0.254, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 326164, a: 0.278, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 395583, a: 0.302, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Base Cementada", 
         values: {
-            low: { mr: 570000, a: 0.140, m: 1.0 },
-            medium: { mr: 620000, a: 0.160, m: 1.0 },
-            high: { mr: 680000, a: 0.180, m: 1.0 }
+            low: { mr: 570000, a: 0.140, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 620000, a: 0.160, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 680000, a: 0.180, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Base hidráulica", 
         values: {
-            low: { mr: 21150, a: 0.100, m: 1.0 },
-            medium: { mr: 25446, a: 0.120, m: 1.0 },
-            high: { mr: 30616, a: 0.140, m: 1.0 }
+            low: { mr: 21150, a: 0.100, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 25446, a: 0.120, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 30616, a: 0.140, m: 1.0, h_cm_existing: 0 }
         }
     },
     { 
         name: "Sub-Base Hidráulica", 
         values: {
-            low: { mr: 11180, a: 0.080, m: 1.0 },
-            medium: { mr: 13695, a: 0.100, m: 1.0 },
-            high: { mr: 16775, a: 0.120, m: 1.0 }
+            low: { mr: 11180, a: 0.080, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 13695, a: 0.100, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 16775, a: 0.120, m: 1.0, h_cm_existing: 0 }
         }
     },
     {
         name: CUSTOM_LAYER_NAME,
         values: {
-            low: { mr: 0, a: 0, m: 1.0 },
-            medium: { mr: 0, a: 0, m: 1.0 },
-            high: { mr: 0, a: 0, m: 1.0 }
+            low: { mr: 0, a: 0, m: 1.0, h_cm_existing: 0 },
+            medium: { mr: 0, a: 0, m: 1.0, h_cm_existing: 0 },
+            high: { mr: 0, a: 0, m: 1.0, h_cm_existing: 0 }
         }
     }
 ];

@@ -25,7 +25,7 @@ const Home: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
-          Herramienta para diseño de pavimentos
+          Herramienta para elaborar DT de conservación
         </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto">
           Basada en la metodología AASHTO-1993
@@ -69,15 +69,13 @@ const Home: React.FC = () => {
         </h3>
         <div className="space-y-4 text-slate-700">
           <p>
-            Para incorporar la variable tránsito al análisis y diseño de pavimentos, es necesario convertir el flujo mixto de vehículos en cargas estandarizadas por eje. Estos se clasifican en:
+            Mediante el número estructural "SN" de la estructura actual bajo sus condiciones prevalecientes de deterioro o daño se determina su vida remanente estimada, posterior a ello se proponen alternativas para incrementar la vida a por lo menos 10 años.
           </p>
-          <ul className="list-disc pl-6 space-y-2 text-slate-600">
-            <li><strong className="text-emerald-600">Ejes sencillos:</strong> Un solo eje con ruedas simples o dobles.</li>
-            <li><strong className="text-blue-600">Ejes tándem:</strong> Dos ejes articulados.</li>
-            <li><strong className="text-purple-600">Ejes trídem:</strong> Tres ejes articulados.</li>
-          </ul>
           <p>
-            Esta aplicación automatiza el cálculo basado en las cargas máximas permitidas para caminos tipo ET, A, B, C y D, facilitando el cálculo final de <strong>ESALs (Equivalent Single Axle Load)</strong>.
+            La herramienta permite iterar el SN utilizado en la fórmula de la AASHTO-1993 con el utilizado en el cálculo de los ESAL's, sin embargo, para incorporar la variable tránsito al análisis, es necesario convertir el flujo mixto de vehículos a ejes (sencillos, tándem y trídem) y estos a su vez en ejes equivalentes de 8.2 toneladas.
+          </p>
+          <p>
+            Esta aplicación automatiza el cálculo basado en las cargas máximas permitidas de la NOM-012-SCT-2-2017 para caminos tipo ET, A, B, C y D, facilitando el cálculo final de <strong>ESALs (Equivalent Single Axle Load)</strong>.
           </p>
         </div>
       </div>
