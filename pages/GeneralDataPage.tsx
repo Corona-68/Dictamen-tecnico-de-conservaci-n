@@ -132,10 +132,28 @@ const GeneralDataPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value
-    }));
+    const numVal = type === 'number' ? parseFloat(value) : value;
+
+    setFormData(prev => {
+        const newData = {
+            ...prev,
+            [name]: numVal
+        };
+
+        // If global drainage coefficient changes, update relevant layers (BH and SB)
+        if (name === 'drainageCoefficient') {
+            const mFactor = isNaN(parseFloat(value)) ? 0.9 : parseFloat(value);
+            newData.layers = prev.layers.map(layer => {
+                const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+                if (cat?.code === 'BH' || cat?.code === 'SB') {
+                    return { ...layer, m: mFactor };
+                }
+                return layer;
+            });
+        }
+
+        return newData;
+    });
     setIsSaved(false);
   };
 
@@ -161,7 +179,9 @@ const GeneralDataPage: React.FC = () => {
         }
 
         const newValues = getLayerValues(layer.name, level);
-        return { ...layer, ...newValues };
+        const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+        const mValue = (cat?.code === 'BH' || cat?.code === 'SB') ? (formData.drainageCoefficient || 0.9) : 1.0;
+        return { ...layer, ...newValues, m: mValue };
     });
 
     setFormData(prev => ({
@@ -177,12 +197,16 @@ const GeneralDataPage: React.FC = () => {
     const defaultType = LAYER_CATALOG[0].name;
     const values = getLayerValues(defaultType, formData.rigidityLevel);
     
+    // Auto-determine drainage m based on layer code
+    const cat = LAYER_CATALOG.find(c => c.name === defaultType);
+    const mValue = (cat?.code === 'BH' || cat?.code === 'SB') ? (formData.drainageCoefficient || 0.9) : 1.0;
+    
     const newLayer: PavementLayer = {
         id: `l_${Date.now()}`,
         name: defaultType,
         mr: values.mr,
         a: values.a,
-        m: values.m || 1.0,
+        m: mValue,
         h_cm_existing: 0
     };
 
@@ -216,11 +240,15 @@ const GeneralDataPage: React.FC = () => {
             // If changing name to a standard layer, auto-update values
             if (field === 'name') {
                 const newValues = getLayerValues(value as string, prev.rigidityLevel);
+                const cat = LAYER_CATALOG.find(c => c.name === value);
+                const mValue = (cat?.code === 'BH' || cat?.code === 'SB') ? (prev.drainageCoefficient || 0.9) : 1.0;
+
                 // Clear custom code if switching back to standard
                 return { 
                     ...layer, 
                     name: value as string, 
                     ...newValues,
+                    m: mValue,
                     customCode: undefined 
                 };
             }
@@ -1085,16 +1113,15 @@ const GeneralDataPage: React.FC = () => {
             {/* Dynamic Layers List */}
             <div className="space-y-4">
                 {/* Header - Desktop Only */}
-                <div className="hidden md:flex justify-between items-center mb-2">
-                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 flex-grow">
+                <div className="hidden md:flex items-center mb-2">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-400 uppercase px-1 w-full">
                         <div className="col-span-1 text-center">#</div>
-                        <div className="col-span-3">Capa</div>
+                        <div className="col-span-4">Capa</div>
                         <div className="col-span-2">Módulo (psi)</div>
                         <div className="col-span-2 text-center">Aporte (a)</div>
-                        <div className="col-span-2 text-center">Drenaje (m)</div>
                         <div className="col-span-2 text-center">Espesor Existente (cm)</div>
+                        <div className="col-span-1 text-right pr-2">Acciones</div>
                     </div>
-                    <div className="w-8"></div>
                 </div>
 
                 {formData.layers?.map((layer, index) => (
@@ -1136,7 +1163,7 @@ const GeneralDataPage: React.FC = () => {
                             </div>
 
                             {/* Name/Select */}
-                            <div className="md:col-span-3">
+                            <div className="md:col-span-4">
                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo de Capa</label>
                                 <select
                                     value={layer.customCode ? CUSTOM_LAYER_NAME : layer.name}
@@ -1184,19 +1211,6 @@ const GeneralDataPage: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Coef M */}
-                            <div className="md:col-span-2">
-                                <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Drenaje (m)</label>
-                                <input 
-                                    type="number" 
-                                    value={layer.m}
-                                    step="0.01"
-                                    onChange={(e) => handleLayerChange(layer.id, 'm', parseFloat(e.target.value))}
-                                    className={`${InputClass} py-2 text-sm text-center font-mono`}
-                                    disabled={!!layer.customCode}
-                                />
-                            </div>
-
                             {/* Espesor Real */}
                             <div className="md:col-span-2">
                                 <label className="block md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Espesor Existente (cm)</label>
@@ -1210,25 +1224,25 @@ const GeneralDataPage: React.FC = () => {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex md:col-span-1 justify-center md:justify-end gap-2 mt-2 md:mt-0">
+                            <div className="flex md:col-span-1 justify-center md:justify-end gap-1 mt-2 md:mt-0">
                                 <button
                                     type="button"
                                     onClick={() => handleOpenCalc(layer)}
-                                    className="flex-1 md:flex-none text-blue-600 hover:text-blue-700 p-2 rounded bg-blue-50 md:bg-transparent md:hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 md:gap-0"
+                                    className="flex-1 md:flex-none text-blue-600 hover:text-blue-700 p-1.5 rounded bg-blue-50 md:bg-transparent md:hover:bg-blue-50 transition-colors flex items-center justify-center"
                                     title="Calcular propiedades"
                                 >
-                                    <i className="fas fa-calculator"></i>
-                                    <span className="md:hidden text-[10px] font-bold uppercase">Calcular</span>
+                                    <i className="fas fa-calculator text-sm"></i>
+                                    <span className="md:hidden text-[10px] font-bold uppercase ml-2">Calcular</span>
                                 </button>
                                 {formData.layers.length > 1 && (
                                     <button
                                         type="button"
                                         onClick={() => handleRemoveLayer(layer.id)}
-                                        className="flex-1 md:flex-none text-red-600 hover:text-red-700 p-2 rounded bg-red-50 md:bg-transparent md:hover:bg-red-50 transition-colors flex items-center justify-center gap-2 md:gap-0"
+                                        className="flex-1 md:flex-none text-red-600 hover:text-red-700 p-1.5 rounded bg-red-50 md:bg-transparent md:hover:bg-red-50 transition-colors flex items-center justify-center"
                                         title="Eliminar capa"
                                     >
-                                        <i className="fas fa-trash-alt"></i>
-                                        <span className="md:hidden text-[10px] font-bold uppercase">Eliminar</span>
+                                        <i className="fas fa-trash-alt text-sm"></i>
+                                        <span className="md:hidden text-[10px] font-bold uppercase ml-2">Eliminar</span>
                                     </button>
                                 )}
                             </div>
@@ -1441,16 +1455,6 @@ const GeneralDataPage: React.FC = () => {
                                 step="0.01"
                                 value={customLayerForm.a || ''}
                                 onChange={(e) => setCustomLayerForm(prev => ({ ...prev, a: parseFloat(e.target.value) }))}
-                                className={InputClass}
-                            />
-                        </div>
-                        <div>
-                            <label className={LabelClass}>Coef. Drenaje (m)</label>
-                            <input 
-                                type="number" 
-                                step="0.01"
-                                value={customLayerForm.m || ''}
-                                onChange={(e) => setCustomLayerForm(prev => ({ ...prev, m: parseFloat(e.target.value) }))}
                                 className={InputClass}
                             />
                         </div>

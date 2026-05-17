@@ -142,7 +142,6 @@ const StructureTable = ({
                             <tr>
                                 <th className="px-4 py-3">Capa</th>
                                 <th className="px-4 py-3 text-center">A</th>
-                                <th className="px-4 py-3 text-center">M</th>
                                 <th className="px-4 py-3 text-right">E(psi)</th>
                                 <th className="px-4 py-3 text-right font-bold text-slate-900 w-32">Espesor (cm)</th>
                                 <th className="px-4 py-3 text-right text-emerald-600">SN Aportado</th>
@@ -200,17 +199,6 @@ const StructureTable = ({
                                                 className="w-16 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none text-center"
                                             />
                                         ) : formatNum(layer.a, 2)}
-                                    </td>
-                                    <td className="px-4 py-3 text-center">
-                                        {isEditable ? (
-                                            <input 
-                                                type="number" 
-                                                step="0.01"
-                                                value={layer.m} 
-                                                onChange={(e) => onLayerChange?.(layer.id, 'm', e.target.value)}
-                                                className="w-16 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none text-center"
-                                            />
-                                        ) : layer.m}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono">
                                         {isEditable ? (
@@ -351,18 +339,6 @@ const StructureTable = ({
                                                 className="w-12 text-right border-b border-slate-100"
                                             />
                                         ) : <span className="text-slate-700">{formatNum(layer.a, 2)}</span>}
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>M:</span>
-                                        {isEditable ? (
-                                            <input 
-                                                type="number" 
-                                                step="0.01"
-                                                value={layer.m} 
-                                                onChange={(e) => onLayerChange?.(layer.id, 'm', e.target.value)}
-                                                className="w-12 text-right border-b border-slate-100"
-                                            />
-                                        ) : <span className="text-slate-700">{layer.m}</span>}
                                     </div>
                                 </div>
 
@@ -783,11 +759,10 @@ const EsalsPage: React.FC = () => {
           const snRequiredForSupport = solveAashtoIterative(supportMr, totalESALsDesign);
           let snNeededFromLayer = Math.max(0, snRequiredForSupport - accumulatedSN);
           
-          const m = layer.m !== undefined 
-            ? layer.m 
-            : (asphaltLayerNames.some(name => layer.name.includes(name))
-                ? 1.0 
-                : (genData.drainageCoefficient || 1.0));
+          const cat = LAYER_CATALOG.find(c => c.name === layer.name);
+          const m = (cat?.code === 'BH' || cat?.code === 'SB') 
+            ? (genData.drainageCoefficient || 0.9) 
+            : 1.0;
           
           const h_in_calc = (layer.a * m) > 0 ? snNeededFromLayer / (layer.a * m) : 0;
           const h_cm_calc = h_in_calc * 2.54;
@@ -933,6 +908,7 @@ const EsalsPage: React.FC = () => {
     return [
       { 
         name: titleActual, 
+        totalThickness: structureActual.layers.reduce((sum, l) => sum + l.h_cm_real, 0),
         ...structureActual.layers.reduce((acc, l, i) => {
             const cat = LAYER_CATALOG.find(c => c.name === l.name);
             const code = l.customCode || (cat ? cat.code : '??');
@@ -941,6 +917,7 @@ const EsalsPage: React.FC = () => {
       },
       ...structuresAlternatives.map(alt => ({
         name: alt.title,
+        totalThickness: alt.data.layers.reduce((sum, l) => sum + l.h_cm_real, 0),
         ...alt.data.layers.reduce((acc, l, i) => {
             const cat = LAYER_CATALOG.find(c => c.name === l.name);
             const code = l.customCode || (cat ? cat.code : '??');
@@ -949,6 +926,8 @@ const EsalsPage: React.FC = () => {
       }))
     ];
   }, [titleActual, structureActual.layers, structuresAlternatives]);
+
+  const actualTotalThickness = structuralChartData[0]?.totalThickness || 0;
 
   const getLayerColor = (name: string) => {
     const layer = LAYER_CATALOG.find(l => l.name === name);
@@ -1244,20 +1223,19 @@ const EsalsPage: React.FC = () => {
         
         autoTable(doc, {
             startY: 25,
-            head: [['Capa', 'a', 'm', 'E(psi)', 'Espesor (cm)', 'SN Aportado']],
+            head: [['Capa', 'a', 'E(psi)', 'Espesor (cm)', 'SN Aportado']],
             body: [
                 ...data.layers.map((l: any) => [
                     l.name,
                     formatNum(l.a, 2),
-                    l.m,
                     formatNum(l.mr, 0),
                     formatNum(l.h_cm_real, 1),
                     formatNum(l.snProvided, 2)
                 ]),
-                ['Subrasante', '-', '-', formatNum(genData.subgradeMr, 0), '-', '-']
+                ['Subrasante', '-', formatNum(genData.subgradeMr, 0), '-', '-']
             ],
             foot: [[
-                'TOTAL', '', '', '', '', formatNum(data.snTotalProvided, 2)
+                'TOTAL', '', '', '', formatNum(data.snTotalProvided, 2)
             ]],
             theme: 'striped',
             headStyles: { fillColor: [15, 118, 110] }
@@ -1516,12 +1494,14 @@ const EsalsPage: React.FC = () => {
                                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                       <XAxis 
                                           dataKey="name" 
-                                          height={50} 
+                                          height={60} 
                                           interval={0}
-                                          tick={{ fontSize: 12, fontWeight: 600, fill: '#475569' }}
+                                          tick={{ fontSize: 13, fontWeight: 600, fill: '#475569' }}
+                                          angle={0}
+                                          dy={5}
                                       />
                                       <YAxis 
-                                          label={{ value: 'SN Aportado', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                                          label={{ value: 'SN Aportado', angle: -90, position: 'insideLeft', offset: 0, style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
                                           tick={{ fontSize: 11, fill: '#64748b' }}
                                       />
                                       <Tooltip 
@@ -1533,9 +1513,15 @@ const EsalsPage: React.FC = () => {
                                           y={snRequiredTotalManual} 
                                           stroke="#ef4444" 
                                           strokeDasharray="5 5" 
-                                          label={{ position: 'right', value: `SN Req: ${formatNum(snRequiredTotalManual)}`, fill: '#ef4444', fontSize: 12, fontWeight: 'bold' }} 
+                                          label={{ 
+                                              position: 'top', 
+                                              value: `SN req. = ${formatNum(snRequiredTotalManual)}`, 
+                                              fill: '#ef4444', 
+                                              fontSize: 14, 
+                                              fontWeight: 'bold' 
+                                          }} 
                                       />
-                                      <Bar dataKey="sn" name="SN Aportado" radius={[6, 6, 0, 0]} barSize={80}>
+                                      <Bar dataKey="sn" name="SN Aportado" radius={[6, 6, 0, 0]} barSize={110}>
                                           {chartData.map((entry, index) => (
                                               <Cell 
                                                   key={`cell-${index}`} 
@@ -1582,12 +1568,14 @@ const EsalsPage: React.FC = () => {
                                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                           <XAxis 
                                               dataKey="name" 
-                                              height={50} 
+                                              height={60} 
                                               interval={0}
-                                              tick={{ fontSize: 12, fontWeight: 600, fill: '#475569' }}
+                                              tick={{ fontSize: 13, fontWeight: 600, fill: '#475569' }}
+                                              angle={0}
+                                              dy={5}
                                           />
                                           <YAxis 
-                                              label={{ value: 'Espesor Total (cm)', angle: -90, position: 'insideLeft', style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
+                                              label={{ value: 'Espesor Total (cm)', angle: -90, position: 'insideLeft', offset: 0, style: { fill: '#64748b', fontSize: 12, fontWeight: 600 } }}
                                               tick={{ fontSize: 11, fill: '#64748b' }}
                                           />
                                           <Tooltip 
@@ -1596,6 +1584,18 @@ const EsalsPage: React.FC = () => {
                                                   const layerName = props.payload[`${name}_name`];
                                                   return [`${value} cm`, layerName || name];
                                               }}
+                                          />
+                                          <ReferenceLine 
+                                               y={actualTotalThickness} 
+                                               stroke="#ef4444" 
+                                               strokeWidth={2}
+                                               label={{ 
+                                                   position: 'top', 
+                                                   value: 'Rasante', 
+                                                   fill: '#ef4444', 
+                                                   fontSize: 14, 
+                                                   fontWeight: 'bold'
+                                               }} 
                                           />
                                           {/* We need to render Bars for each possible layer index in reverse to show first layer at top */}
                                           {/* Assuming max 10 layers for safety */}
@@ -1606,7 +1606,7 @@ const EsalsPage: React.FC = () => {
                                                     key={`layer_${i}`}
                                                     dataKey={`layer_${i}`} 
                                                     stackId="a"
-                                                    barSize={100}
+                                                    barSize={110}
                                                 >
                                                     {structuralChartData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={getLayerColor(entry[`layer_${i}_name`] || '')} />
@@ -1627,20 +1627,31 @@ const EsalsPage: React.FC = () => {
                                                             
                                                             return (
                                                                 <g>
+                                                                    {/* White box for the code label */}
+                                                                    <rect 
+                                                                       x={x + width / 2 - 20} 
+                                                                       y={y + height / 2 - 20} 
+                                                                       width={40} 
+                                                                       height={22} 
+                                                                       fill="white" 
+                                                                       stroke="#cbd5e1"
+                                                                       strokeWidth={0.5}
+                                                                       rx={2}
+                                                                    />
                                                                     <text 
                                                                         x={x + width / 2} 
-                                                                        y={y + height / 2 - 6} 
-                                                                        fill={textColor} 
+                                                                        y={y + height / 2 - 9} 
+                                                                        fill="#1e293b" 
                                                                         textAnchor="middle" 
                                                                         dominantBaseline="middle" 
-                                                                        fontSize={13} 
+                                                                        fontSize={12} 
                                                                         fontWeight="bold"
                                                                     >
                                                                         {code}
                                                                     </text>
                                                                     <text 
                                                                         x={x + width / 2} 
-                                                                        y={y + height / 2 + 10} 
+                                                                        y={y + height / 2 + 15} 
                                                                         fill={textColor} 
                                                                         fillOpacity={0.9}
                                                                         textAnchor="middle" 
@@ -1657,6 +1668,31 @@ const EsalsPage: React.FC = () => {
                                                 </Bar>
                                               );
                                           })}
+                                          {/* Invisible bar to show the total +X thickness labels */}
+                                          <Bar dataKey="totalThickness" stackId="a" fill="transparent">
+                                               <LabelList 
+                                                   dataKey="totalThickness" 
+                                                   position="top" 
+                                                   content={(props: any) => {
+                                                       const { x, y, width, value, index } = props;
+                                                       if (index === 0) return null;
+                                                       const diff = Math.round(value - actualTotalThickness);
+                                                       if (diff <= 0) return null;
+                                                       return (
+                                                           <text 
+                                                               x={x + width / 2} 
+                                                               y={y - 12} 
+                                                               fill="#ef4444" 
+                                                               textAnchor="middle" 
+                                                               fontSize={18} 
+                                                               fontWeight="bold"
+                                                           >
+                                                               +{diff}
+                                                           </text>
+                                                       );
+                                                   }}
+                                               />
+                                          </Bar>
                                       </BarChart>
                                   </ResponsiveContainer>
                               </div>
