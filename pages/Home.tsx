@@ -36,7 +36,7 @@ const Home: React.FC = () => {
         <Card
           to="/datos"
           title="Datos Generales"
-          description="Configura los parámetros del proyecto: TDPA, porcentaje de carga, tipo de camino y número de carriles."
+          description="Ingresa los parámetros del proyecto: Información del camino, tránsito, factores de diseño, diagnóstico y de la estructuración de capas del pavimento."
           icon="fa-file-invoice"
           color="bg-orange-500"
         />
@@ -50,14 +50,14 @@ const Home: React.FC = () => {
         <Card
           to="/ejes"
           title="Ejes 1er. Año"
-          description="Visualiza la tabla de resultados con los ejes acumulados (sencillos, tándem y trídem) por estado de carga."
+          description="Visualiza la tabla de resultados con los ejes acumulados en el 1er. año (sencillos, tándem y trídem) tanto cargados como vacíos."
           icon="fa-chart-bar"
           color="bg-emerald-500"
         />
         <Card
           to="/esals"
           title="Diseño de Pavimento"
-          description="Cálculo de ESALs de diseño y determinación de la estructura de pavimento requerida (espesores)."
+          description="Se calcula la vida remanente del pavimento actual y de las 3 alternativas que se propongan."
           icon="fa-layer-group"
           color="bg-purple-600"
         />
@@ -72,7 +72,7 @@ const Home: React.FC = () => {
             Mediante el número estructural "SN" de la estructura actual bajo sus condiciones prevalecientes de deterioro o daño se determina su vida remanente estimada, posterior a ello se proponen alternativas para incrementar la vida a por lo menos 10 años.
           </p>
           <p>
-            La herramienta permite iterar el SN utilizado en la fórmula de la AASHTO-1993 con el utilizado en el cálculo de los ESAL's, sin embargo, para incorporar la variable tránsito al análisis, es necesario convertir el flujo mixto de vehículos a ejes (sencillos, tándem y trídem) y estos a su vez en ejes equivalentes de 8.2 toneladas.
+            La herramienta permite iterar el SN en la fórmula de la AASHTO-1993 con el utilizado en el cálculo de los ESAL's, sin embargo, para incorporar la variable tránsito al análisis, es necesario convertir el flujo mixto de vehículos a ejes (sencillos, tándem y trídem) y estos a su vez en ejes equivalentes de 8.2 toneladas.
           </p>
           <p>
             Esta aplicación automatiza el cálculo basado en las cargas máximas permitidas de la NOM-012-SCT-2-2017 para caminos tipo ET, A, B, C y D, facilitando el cálculo final de <strong>ESALs (Equivalent Single Axle Load)</strong>.

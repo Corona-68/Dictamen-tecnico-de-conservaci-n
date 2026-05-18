@@ -163,14 +163,7 @@ const UnamPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="flex justify-end no-print">
-                <button 
-                    onClick={() => window.print()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-md"
-                >
-                    <i className="fas fa-print mr-2"></i> Imprimir Análisis
-                </button>
-            </div>
+
         </div>
     );
 };

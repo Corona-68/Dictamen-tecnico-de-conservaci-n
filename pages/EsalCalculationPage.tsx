@@ -262,12 +262,6 @@ const EsalCalculationPage: React.FC = () => {
                     >
                         <i className="fas fa-save"></i> Guardar SN
                     </button>
-                    <button 
-                        onClick={() => window.print()}
-                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-lg font-bold transition-all border border-slate-200"
-                    >
-                        <i className="fas fa-print mr-2"></i> Imprimir
-                    </button>
                 </div>
             </div>
 
